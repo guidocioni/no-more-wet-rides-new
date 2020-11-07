@@ -10,6 +10,8 @@ from geopy.geocoders import Nominatim
 from numba import jit
 import bz2
 import plotly.graph_objs as go
+import plotly.express as px
+
 
 geolocator = Nominatim(user_agent='directions', timeout=10)
 apiURL = "https://api.mapbox.com/directions/v5/mapbox"
@@ -269,7 +271,7 @@ def zoom_center(lons: tuple = None, lats: tuple = None, lonlats: tuple = None,
 
 def generate_map_plot(lons=None, lats=None):
     if lons is not None and lats is not None:
-        zoom, center = zoom_center(lons, lats, width_to_height=1)
+        zoom, center = zoom_center(lons, lats, width_to_height=5)
 
         fig = go.Figure(go.Scattermapbox(
             lat=lats,
@@ -307,4 +309,31 @@ def generate_map_plot(lons=None, lats=None):
             )
         )
 
+    return fig
+
+def make_fig_time(df):
+    if df is not None:
+        df = df.rename(columns=lambda s: s.strftime('%H:%M'), 
+                  index=lambda s: (s.seconds/60))
+
+        fig = px.line(df,
+                     color_discrete_sequence=px.colors.qualitative.Pastel)
+
+        fig.update_layout(
+            margin={"r": 0, "t": 0, "l": 0, "b": 0},
+            template='plotly_white',
+            legend_orientation="h",
+            xaxis=dict(title='Time from departure [min]'),
+            yaxis=dict(title='Precipitation [mm/h]'),
+            legend=dict(
+                  title=dict(text='leave at '),
+                  font=dict(size=10))
+        )
+    else:
+        fig = go.Figure()
+        fig.update_layout(
+            margin={"r": 0, "t": 0, "l": 0, "b": 0},
+            template='plotly_white',
+        )
+    
     return fig
