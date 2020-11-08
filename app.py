@@ -9,7 +9,8 @@ import pandas as pd
 from flask_caching import Cache
 from flask import request
 
-app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP],
+                url_base_pathname='/nmwr/')
 
 server = app.server
 
@@ -153,7 +154,7 @@ def get_directions(from_address, to_address, mode):
     return utils.mapbox_parser(from_address, to_address, mode)
 
 
-@server.route('/query', methods=['GET', 'POST'])
+@server.route('/nmwr/query', methods=['GET', 'POST'])
 def query():
     from_address = request.args.get("from")
     to_address = request.args.get("to")
