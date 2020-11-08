@@ -6,7 +6,7 @@ import requests
 import os
 import numpy as np
 import json
-from numba import jit
+#from numba import jit
 import bz2
 import plotly.graph_objs as go
 import plotly.express as px
@@ -140,7 +140,7 @@ def process_radar_data(fnames):
     return lon_radar, lat_radar, time_radar, dtime_radar, rr
 
 
-@jit(nopython=True)
+#@jit(nopython=True)
 def extract_rain_rate_from_radar(lon_bike, lat_bike, dtime_bike, lon_radar, lat_radar, dtime_radar, rr):
     """
     Given the longitude, latitude and timedelta objects of the radar and of the bike iterate through 
@@ -274,7 +274,7 @@ def zoom_center(lons: tuple = None, lats: tuple = None, lonlats: tuple = None,
         zoom = round(min(lon_zoom, lat_zoom), 2)
     else:
         raise NotImplementedError(
-            f'{projection} projection is not implemented'
+            'projection is not implemented'
         )
 
     return zoom, center

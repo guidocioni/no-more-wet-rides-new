@@ -81,8 +81,8 @@ app.layout = dbc.Container(
                                 dbc.Col(map_card),
                             ],
                         ),
-                        ], sm=5, md=4),
-                dbc.Col(dbc.Spinner(fig_card), sm=7, md=8, align='center'),
+                        ], sm=12, md=12, lg=4),
+                dbc.Col(dbc.Spinner(fig_card), sm=12, md=12, lg=8, align='center'),
             ],
         ),
 
