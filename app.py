@@ -7,6 +7,7 @@ from dash.dependencies import Input, Output, State
 import json
 import pandas as pd
 from flask_caching import Cache
+from flask import request
 
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 
@@ -105,7 +106,7 @@ def create_coords_and_map(n_clicks, from_address, to_address, mode):
         return utils.generate_map_plot(), y
     else:
         if from_address is not None and to_address is not None:
-            lons, lats, dtime = utils.mapbox_parser(from_address, to_address, mode)
+            lons, lats, dtime = get_directions(from_address, to_address, mode)
             df = pd.DataFrame({'lons': lons, 'lats': lats, 'dtime': dtime.seconds.values})
             return utils.generate_map_plot(lons, lats), df.to_json(date_format='iso', orient='split')
         else:
@@ -145,6 +146,29 @@ def get_data(lons, lats, dtime):
                                     time_radar)
 
     return df
+
+
+@cache.memoize(300)
+def get_directions(from_address, to_address, mode):
+    return utils.mapbox_parser(from_address, to_address, mode)
+
+
+@server.route('/query', methods=['GET', 'POST'])
+def query():
+    from_address = request.args.get("from")
+    to_address = request.args.get("to")
+    mode = request.args.get("mode")
+
+    if from_address and to_address:
+        if mode:
+            lons, lats, dtime = get_directions(from_address, to_address, mode)
+        else:
+            lons, lats, dtime =  get_directions(from_address, to_address, mode='cycling')
+        # compute the data from radar, the result is cached 
+        out = get_data(lons, lats, dtime.seconds.values)
+        return out.to_json(orient='split', date_format='iso')
+    else:
+        return None
 
 
 if __name__ == "__main__":
