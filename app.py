@@ -10,7 +10,9 @@ from flask_caching import Cache
 from flask import request
 
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP],
-                url_base_pathname='/nmwr/')
+                url_base_pathname='/nmwr/',
+                meta_tags=[{'name': 'viewport', 
+                            'content': 'width=device-width, initial-scale=1'}])
 
 server = app.server
 
@@ -63,10 +65,25 @@ fig_card = html.Div(
     ]
 )
 
+help_card =  dbc.Card (  [
+        dbc.CardBody(
+            [
+                html.H4("Help", className="card-title"),
+                html.P(
+                    ["Enter the start and end point of your journey and press on generate. "
+                                        "After a few seconds the graph will show precipitation forecast on your journey on different start times. You can then decide when to leave. "
+                                        "For details see ", html.A('here', href='https://github.com/guidocioni/no-more-wet-rides-new')],
+                    className="card-text",
+                ),
+            ]
+        ),
+    ],)
+
 
 app.layout = dbc.Container(
     [
-        html.H1("no more wet rides"),
+        html.H1("No more wet rides!"),
+        html.H6('A simple webapp to save your bike rides from the crappy german weather'),
         html.Hr(),
         dbc.Row(
             [
@@ -81,9 +98,14 @@ app.layout = dbc.Container(
                                 dbc.Col(map_card),
                             ],
                         ),
-                        ], sm=12, md=12, lg=4),
-                dbc.Col(dbc.Spinner(fig_card), sm=12, md=12, lg=8, align='center'),
-            ],
+                        ], sm=12, md=12, lg=4, align='center'),
+                dbc.Col(
+                    [
+                    dbc.Spinner(fig_card),
+                    help_card
+                    ],
+                 sm=12, md=12, lg=7, align='center'),
+            ], justify="center",
         ),
 
     html.Div(id='intermediate-value', style={'display': 'none'})

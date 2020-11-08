@@ -293,7 +293,6 @@ def generate_map_plot(lons=None, lats=None):
             ),))
 
         fig.update_layout(
-            margin={"r": 0, "t": 0, "l": 0, "b": 0},
             hovermode='closest',
             mapbox=dict(
                 accesstoken=apiKey,
@@ -308,7 +307,6 @@ def generate_map_plot(lons=None, lats=None):
         fig = go.Figure(go.Scattermapbox())
 
         fig.update_layout(
-            margin={"r": 0, "t": 0, "l": 0, "b": 0},
             mapbox=dict(
                 accesstoken=apiKey,
                 center=go.layout.mapbox.Center(
@@ -319,6 +317,8 @@ def generate_map_plot(lons=None, lats=None):
             )
         )
 
+    fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0},
+        height=300)
     return fig
 
 def make_fig_time(df):
