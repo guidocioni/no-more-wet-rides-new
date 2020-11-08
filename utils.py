@@ -1,19 +1,17 @@
 import pandas as pd
-from datetime import datetime, timedelta
+from datetime import timedelta
 import re
 import radolan as radar
 import requests
 import os
 import numpy as np
 import json
-from geopy.geocoders import Nominatim
 from numba import jit
 import bz2
 import plotly.graph_objs as go
 import plotly.express as px
 
 
-geolocator = Nominatim(user_agent='directions', timeout=10)
 apiURL = "https://api.mapbox.com/directions/v5/mapbox"
 apiKey = os.environ['MAPBOX_KEY']
 
@@ -23,10 +21,8 @@ shifts = (1, 3, 5, 7, 9)
 
 def mapbox_parser(start_point, end_point, mode='cycling'):
     #TODO - Interpolate output to have equally spaced points
-    sourceLat = geolocator.geocode(start_point).latitude
-    sourceLon = geolocator.geocode(start_point).longitude
-    destLat = geolocator.geocode(end_point).latitude
-    destLon = geolocator.geocode(end_point).longitude
+    _, sourceLon, sourceLat = get_place_address(start_point)
+    _, destLon, destLat = get_place_address(end_point)
 
     url = "%s/%s/%4.5f,%4.5f;%4.5f,%4.5f?geometries=geojson&annotations=duration,distance&overview=full&access_token=%s" % (
         apiURL, mode, sourceLon, sourceLat, destLon, destLat, apiKey)
@@ -42,6 +38,20 @@ def mapbox_parser(start_point, end_point, mode='cycling'):
     dtime = np.cumsum(pd.to_timedelta(time, unit='s'))
 
     return lons, lats, dtime
+
+
+def get_place_address(place):
+    apiURL_places = "https://api.mapbox.com/geocoding/v5/mapbox.places"
+
+    url = "%s/%s.json?&access_token=%s&country=DE" % (apiURL_places, place, apiKey)
+
+    response = requests.get(url)
+    json_data = json.loads(response.text)
+
+    place_name = json_data['features'][0]['place_name']
+    lon, lat = json_data['features'][0]['center']
+
+    return place_name, lon, lat
 
 
 def distance_km(lon1, lon2, lat1, lat2):
