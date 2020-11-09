@@ -1,8 +1,7 @@
-# no-more-wet-rides 
-
-> A simple webapp to save your bike rides from the crappy german weather
-
+# No more wet rides!
 Stuck underneath a tree in a rainy days wondering when is the right time to run home? This app is for you! 
+
+![](dashboard.png)
 
 Given a start and end point the code finds the best itinerary (using the `mapbox` api) and computes a best-guess of precipitation intensity according to your arrival time. It then suggests what is the best time to leave in 5 minutes intervals to avoid as much rain as possible.
 
