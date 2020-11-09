@@ -17,21 +17,22 @@ app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP],
 server = app.server
 
 cache = Cache(server, config={'CACHE_TYPE': 'filesystem', 
-                            'CACHE_DIR': '/tmp'})
+                              'CACHE_DIR': '/tmp'})
+
 
 controls = dbc.Card(
     [
         dbc.InputGroup(
             [
                 dbc.InputGroupAddon("from", addon_type="prepend"),
-                dbc.Input(placeholder="address", id='from_address'),
+                dbc.Input(placeholder="address", id='from_address', type='text'),
             ],
             className="mb-3",
         ),
         dbc.InputGroup(
             [
                 dbc.InputGroupAddon("to", addon_type="prepend"),
-                dbc.Input(placeholder="address", id='to_address'),
+                dbc.Input(placeholder="address", id='to_address', type='text'),
             ],
             className="mb-3",
         ),
@@ -108,7 +109,8 @@ app.layout = dbc.Container(
             ], justify="center",
         ),
 
-    html.Div(id='intermediate-value', style={'display': 'none'})
+    html.Div(id='intermediate-value', style={'display': 'none'}),
+    html.Div(id='radar-data-2', style={'display': 'none'})
     ],
     fluid=True,
 )
@@ -129,7 +131,7 @@ def create_coords_and_map(n_clicks, from_address, to_address, mode):
         return utils.generate_map_plot(), y
     else:
         if from_address is not None and to_address is not None:
-            lons, lats, dtime = get_directions(from_address, to_address, mode)
+            _, _, lons, lats, dtime = get_directions(from_address, to_address, mode)
             df = pd.DataFrame({'lons': lons, 'lats': lats, 'dtime': dtime.seconds.values})
             return utils.generate_map_plot(lons, lats), df.to_json(date_format='iso', orient='split')
         else:
@@ -153,16 +155,48 @@ def func(data):
         return utils.make_fig_time(None)
 
 
+# Only retrieve directions if the inputs are changed,
+# otherwise use cached result
+@cache.memoize(900)
+def get_directions(from_address, to_address, mode):
+    return utils.mapbox_parser(from_address, to_address, mode)
+
+
+# Only update radar data every 5 minutes, although this is not
+# really 100% correct as we should check the remote version 
+# We should read the timestamp from the file and compare it with 
+# the server
+@cache.memoize(300)
+def get_radar_data_cached():
+    return utils.get_radar_data()
+
+
+@app.callback(
+    Output("radar-data-2", "children"),
+    [Input("from_address", "value"), 
+    Input("to_address", "value")], prevent_initial_call=True
+)
+def fire_get_radar_data(from_address, to_address):
+    if to_address is not None and from_address is not None:
+        if (len(to_address) < 6) or (len(from_address) < 6):
+            raise dash.exceptions.PreventUpdate
+        else:
+            _, _, _, _, _ = get_radar_data_cached()
+            return None
+    else:
+        return None
+
+
 @cache.memoize(300)
 def get_data(lons, lats, dtime):
-    lon_radar, lat_radar, time_radar, dtime_radar, rr = utils.get_radar_data()
+    lon_radar, lat_radar, time_radar, dtime_radar, rr = get_radar_data_cached()
 
     rain_bike = utils.extract_rain_rate_from_radar(lon_bike=lons, lat_bike=lats,
-                                                    dtime_bike=dtime,
-                                                    dtime_radar=dtime_radar.seconds.values,
-                                                    lat_radar=lat_radar,
-                                                    lon_radar=lon_radar, 
-                                                    rr=rr)
+                                                   dtime_bike=dtime,
+                                                   dtime_radar=dtime_radar.seconds.values,
+                                                   lat_radar=lat_radar,
+                                                   lon_radar=lon_radar,
+                                                   rr=rr)
     # convert again the time of bike to datetime 
     df = utils.convert_to_dataframe(rain_bike,
                                     pd.to_timedelta(dtime, unit='s'),
@@ -170,10 +204,6 @@ def get_data(lons, lats, dtime):
 
     return df
 
-
-@cache.memoize(300)
-def get_directions(from_address, to_address, mode):
-    return utils.mapbox_parser(from_address, to_address, mode)
 
 
 @server.route('/nmwr/query', methods=['GET', 'POST'])
@@ -184,9 +214,9 @@ def query():
 
     if from_address and to_address:
         if mode:
-            lons, lats, dtime = get_directions(from_address, to_address, mode)
+            _, _, lons, lats, dtime = get_directions(from_address, to_address, mode)
         else:
-            lons, lats, dtime =  get_directions(from_address, to_address, mode='cycling')
+            _, _, lons, lats, dtime =  get_directions(from_address, to_address, mode='cycling')
         # compute the data from radar, the result is cached 
         out = get_data(lons, lats, dtime.seconds.values)
         return out.to_json(orient='split', date_format='iso')

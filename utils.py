@@ -10,6 +10,7 @@ import json
 import bz2
 import plotly.graph_objs as go
 import plotly.express as px
+from multiprocessing import Pool, cpu_count
 
 
 apiURL = "https://api.mapbox.com/directions/v5/mapbox"
@@ -21,8 +22,8 @@ shifts = (1, 3, 5, 7, 9)
 
 def mapbox_parser(start_point, end_point, mode='cycling'):
     #TODO - Interpolate output to have equally spaced points
-    _, sourceLon, sourceLat = get_place_address(start_point)
-    _, destLon, destLat = get_place_address(end_point)
+    sourcePlace, sourceLon, sourceLat = get_place_address(start_point)
+    destPlace, destLon, destLat = get_place_address(end_point)
 
     url = "%s/%s/%4.5f,%4.5f;%4.5f,%4.5f?geometries=geojson&annotations=duration,distance&overview=full&access_token=%s" % (
         apiURL, mode, sourceLon, sourceLat, destLon, destLat, apiKey)
@@ -34,10 +35,10 @@ def mapbox_parser(start_point, end_point, mode='cycling'):
     lons = steps[0]
     lats = steps[1]
     time = json_data['routes'][0]['legs'][0]['annotation']['duration']
-    time.insert(0, 0) 
+    time.insert(0, 0)
     dtime = np.cumsum(pd.to_timedelta(time, unit='s'))
 
-    return lons, lats, dtime
+    return sourcePlace, destPlace, lons, lats, dtime
 
 
 def get_place_address(place):
@@ -100,8 +101,13 @@ def get_radar_data(data_path='/tmp/',
 
     extracted_files = []
     # Add check on remote size, local size 
-    for file in files:
-        extracted_files.append(download_extract_url(file))
+    # for file in files:
+    #     extracted_files.append(download_extract_url(file))
+
+    pool = Pool(cpu_count())
+    extracted_files = pool.map(download_extract_url, files)
+    pool.close()
+    pool.join()
 
     return process_radar_data(extracted_files)
 
@@ -141,7 +147,8 @@ def process_radar_data(fnames):
 
 
 #@jit(nopython=True)
-def extract_rain_rate_from_radar(lon_bike, lat_bike, dtime_bike, lon_radar, lat_radar, dtime_radar, rr):
+def extract_rain_rate_from_radar(lon_bike, lat_bike, dtime_bike, 
+                                 lon_radar, lat_radar, dtime_radar, rr):
     """
     Given the longitude, latitude and timedelta objects of the radar and of the bike iterate through 
     every point of the bike track and find closest point (in time/space) of the radar data. Then 
@@ -149,7 +156,7 @@ def extract_rain_rate_from_radar(lon_bike, lat_bike, dtime_bike, lon_radar, lat_
 
     Returns a numpy array with the rain forecast over the bike track.
     """
-    rain_bike=np.empty(shape=(len(shifts), len(dtime_bike))) # Initialize the array
+    rain_bike = np.empty(shape=(len(shifts), len(dtime_bike))) # Initialize the array
     for i, shift in enumerate(shifts):
         temp = []
         for lat_b, lon_b, dtime_b in zip(lat_bike, lon_bike, dtime_bike):
@@ -165,7 +172,7 @@ def extract_rain_rate_from_radar(lon_bike, lat_bike, dtime_bike, lon_radar, lat_
             # Finally append the subsetted value to the array
             temp.append(rr[ind_time+shift, indx, indy])
         # iterate over all the shifts
-        rain_bike[i,:] = temp 
+        rain_bike[i, :] = temp
 
     #rain_bike = rain_bike/2. - 32.5 # to corrected units 
     #rain_bike = 10. ** (rain_bike / 10.) # to dbz
