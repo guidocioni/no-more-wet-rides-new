@@ -79,6 +79,13 @@ def convert_timezone(dt_from, from_tz='utc', to_tz='Europe/Berlin'):
     return dt_to.tz_localize(None)
 
 
+def strfdelta(tdelta, fmt):
+    d = {"days": tdelta.days}
+    d["hours"], rem = divmod(tdelta.seconds, 3600)
+    d["minutes"], d["seconds"] = divmod(rem, 60)
+    return fmt.format(**d)
+
+
 def download_extract_url(url, data_path='/tmp/'):
     filename = data_path + os.path.basename(url).replace('.bz2','')
 
@@ -286,9 +293,14 @@ def zoom_center(lons: tuple = None, lats: tuple = None, lonlats: tuple = None,
 
     return zoom, center
 
-def generate_map_plot(lons=None, lats=None):
-    if lons is not None and lats is not None:
-        zoom, center = zoom_center(lons, lats, width_to_height=5)
+def generate_map_plot(df):
+    if df is not None:
+        lons = df.lons.values
+        lats = df.lats.values
+        start_point = df.source.values[0]
+        end_point = df.destination.values[0]
+        zoom, center = zoom_center(lons, lats,
+                                   width_to_height=8)
 
         fig = go.Figure(go.Scattermapbox(
             lat=lats,
@@ -297,9 +309,31 @@ def generate_map_plot(lons=None, lats=None):
             line=dict(width=2),
             marker=dict(
                 size=5,
-            ),))
+            ),
+        name='itinerary',
+        hovertext=[strfdelta(delta, fmt="{hours}h {minutes}m") 
+                   for delta in pd.to_timedelta(df.dtime, unit='s')]))
+        
+        fig.add_trace(go.Scattermapbox(
+            lat=[lats[0]],
+            lon=[lons[0]],
+            mode='markers',
+            marker=dict(
+                size=15,
+            ),name='Start',
+         hovertext=start_point))
+
+        fig.add_trace(go.Scattermapbox(
+            lat=[lats[-1]],
+            lon=[lons[-1]],
+            mode='markers',
+            marker=dict(
+                size=15,
+            ),name='Destination',
+         hovertext=end_point))
 
         fig.update_layout(
+            showlegend=False,
             hovermode='closest',
             mapbox=dict(
                 accesstoken=apiKey,
@@ -323,7 +357,7 @@ def generate_map_plot(lons=None, lats=None):
                 zoom=4
             )
         )
-
+        
     fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0},
         height=300)
     return fig
@@ -337,20 +371,36 @@ def make_fig_time(df):
                      color_discrete_sequence=px.colors.qualitative.Pastel)
 
         fig.update_layout(
-            margin={"r": 0, "t": 0, "l": 0, "b": 0},
-            template='plotly_white',
             legend_orientation="h",
-            xaxis=dict(title='Time from departure [min]'),
-            yaxis=dict(title='Precipitation [mm/h]'),
+            xaxis=dict(title='Time from departure [min]',
+                rangemode = 'tozero'),
+            yaxis=dict(title='Precipitation [mm/h]',
+                        rangemode = 'tozero'),
             legend=dict(
                   title=dict(text='leave at '),
                   font=dict(size=10))
         )
     else:
         fig = go.Figure()
+
+        fig.add_annotation(x=2.5, y=1.5,
+            text="No data (yet 😃)",
+            showarrow=False,
+            font=dict(size=30))
+
         fig.update_layout(
-            margin={"r": 0, "t": 0, "l": 0, "b": 0},
-            template='plotly_white',
+                xaxis=dict(
+                    visible=False
+                ),
+                yaxis=dict(
+                    visible=False)
         )
+
+    fig.update_layout(
+        height=400,
+        margin={"r": 0.1, "t": 0.1, "l": 0.1, "b": 0.1},
+        template='plotly_white',
+    )
+
     
     return fig

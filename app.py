@@ -25,16 +25,16 @@ controls = dbc.Card(
         dbc.InputGroup(
             [
                 dbc.InputGroupAddon("from", addon_type="prepend"),
-                dbc.Input(placeholder="address", id='from_address', type='text'),
+                dbc.Input(placeholder="address in Germany", id='from_address', type='text'),
             ],
-            className="mb-3",
+            className="mb-2",
         ),
         dbc.InputGroup(
             [
                 dbc.InputGroupAddon("to", addon_type="prepend"),
-                dbc.Input(placeholder="address", id='to_address', type='text'),
+                dbc.Input(placeholder="address in Germany", id='to_address', type='text'),
             ],
-            className="mb-3",
+            className="mb-2",
         ),
         dbc.InputGroup(
             [
@@ -43,7 +43,8 @@ controls = dbc.Card(
                     id="transport_mode",
                     value="cycling",
                     options=[
-                        {"label": "Bicycle", "value": "cycling"},
+                        {"label": "Cycling", "value": "cycling"},
+                        {"label": "Walking", "value": "walking"},
                     ]
                 ),
             ],
@@ -51,19 +52,21 @@ controls = dbc.Card(
         ),
         dbc.Button("Generate", id="generate-button", className="mr-2"),
     ],
-    body=True,
+    body=True, className="mb-2"
 )
 
 map_card = dbc.Card(
     [
         dcc.Graph(id='map-plot')
-    ]
+    ],
+   className="mb-2"
 )
 
-fig_card = html.Div(
+fig_card = dbc.Card(
     [
         dcc.Graph(id='time-plot')
-    ]
+    ],
+    className="mb-2"
 )
 
 help_card =  dbc.Card (  [
@@ -86,6 +89,9 @@ app.layout = dbc.Container(
         html.H1("No more wet rides!"),
         html.H6('A simple webapp to save your bike rides from the crappy german weather'),
         html.Hr(),
+        dbc.Alert("Since the radar only covers Germany and neighbouring countries the app will fail if you enter an address outside of this area", 
+            color="warning",
+            dismissable=True),
         dbc.Row(
             [
                 dbc.Col([
@@ -128,16 +134,20 @@ def create_coords_and_map(n_clicks, from_address, to_address, mode):
     if n_clicks is None:
         coords = {}
         y = json.dumps(coords)
-        return utils.generate_map_plot(), y
+        return utils.generate_map_plot(df=None), y
     else:
         if from_address is not None and to_address is not None:
-            _, _, lons, lats, dtime = get_directions(from_address, to_address, mode)
-            df = pd.DataFrame({'lons': lons, 'lats': lats, 'dtime': dtime.seconds.values})
-            return utils.generate_map_plot(lons, lats), df.to_json(date_format='iso', orient='split')
+            source, dest, lons, lats, dtime = get_directions(from_address, to_address, mode)
+            df = pd.DataFrame({'lons': lons, 
+                               'lats': lats, 
+                               'dtime': dtime.seconds.values,
+                               'source': source,
+                               'destination': dest})
+            return utils.generate_map_plot(df), df.to_json(date_format='iso', orient='split')
         else:
             coords = {}
             y = json.dumps(coords)
-            return utils.generate_map_plot(), y
+            return utils.generate_map_plot(df=None), y
 
 
 @app.callback(
@@ -178,7 +188,7 @@ def get_radar_data_cached():
 )
 def fire_get_radar_data(from_address, to_address):
     if to_address is not None and from_address is not None:
-        if (len(to_address) < 6) or (len(from_address) < 6):
+        if len(from_address) < 6:
             raise dash.exceptions.PreventUpdate
         else:
             _, _, _, _, _ = get_radar_data_cached()
@@ -214,11 +224,13 @@ def query():
 
     if from_address and to_address:
         if mode:
-            _, _, lons, lats, dtime = get_directions(from_address, to_address, mode)
+            source, dest, lons, lats, dtime = get_directions(from_address, to_address, mode)
         else:
-            _, _, lons, lats, dtime =  get_directions(from_address, to_address, mode='cycling')
+            source, dest, lons, lats, dtime =  get_directions(from_address, to_address, mode='cycling')
         # compute the data from radar, the result is cached 
         out = get_data(lons, lats, dtime.seconds.values)
+        out['source'] = source
+        out['destination'] = dest
         return out.to_json(orient='split', date_format='iso')
     else:
         return None
