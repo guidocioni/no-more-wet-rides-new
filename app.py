@@ -75,13 +75,13 @@ help_card =  dbc.Card (  [
                 html.H4("Help", className="card-title"),
                 html.P(
                     ["Enter the start and end point of your journey and press on generate. "
-                                        "After a few seconds the graph will show precipitation forecast on your journey on different start times. You can then decide when to leave. "
-                                        "For details see ", html.A('here', href='https://github.com/guidocioni/no-more-wet-rides-new')],
+                    "After a few seconds the graph will show precipitation forecast on your journey for different start times. You can then decide when to leave. "
+                    "For details see ", html.A('here', href='https://github.com/guidocioni/no-more-wet-rides-new')],
                     className="card-text",
                 ),
             ]
         ),
-    ],)
+    ],className="mb-1" )
 
 
 app.layout = dbc.Container(
@@ -187,7 +187,7 @@ def get_radar_data_cached():
     Input("to_address", "value")], prevent_initial_call=True
 )
 def fire_get_radar_data(from_address, to_address):
-    if to_address is not None and from_address is not None:
+    if from_address is not None:
         if len(from_address) < 6:
             raise dash.exceptions.PreventUpdate
         else:

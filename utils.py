@@ -397,7 +397,7 @@ def make_fig_time(df):
         )
 
     fig.update_layout(
-        height=400,
+        height=390,
         margin={"r": 0.1, "t": 0.1, "l": 0.1, "b": 0.1},
         template='plotly_white',
     )
