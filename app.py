@@ -183,10 +183,9 @@ def get_radar_data_cached():
 
 @app.callback(
     Output("radar-data-2", "children"),
-    [Input("from_address", "value"), 
-    Input("to_address", "value")], prevent_initial_call=True
+    [Input("from_address", "value")], prevent_initial_call=True
 )
-def fire_get_radar_data(from_address, to_address):
+def fire_get_radar_data(from_address):
     if from_address is not None:
         if len(from_address) < 6:
             raise dash.exceptions.PreventUpdate
@@ -201,7 +200,7 @@ def fire_get_radar_data(from_address, to_address):
 def get_data(lons, lats, dtime):
     lon_radar, lat_radar, time_radar, dtime_radar, rr = get_radar_data_cached()
 
-    rain_bike = utils.extract_rain_rate_from_radar(lon_bike=lons, lat_bike=lats,
+    rain_bike, dtime_itinerary = utils.extract_rain_rate_from_radar_new(lon_bike=lons, lat_bike=lats,
                                                    dtime_bike=dtime,
                                                    dtime_radar=dtime_radar.seconds.values,
                                                    lat_radar=lat_radar,
@@ -209,7 +208,7 @@ def get_data(lons, lats, dtime):
                                                    rr=rr)
     # convert again the time of bike to datetime 
     df = utils.convert_to_dataframe(rain_bike,
-                                    pd.to_timedelta(dtime, unit='s'),
+                                    pd.to_timedelta(dtime_itinerary, unit='s'),
                                     time_radar)
 
     return df

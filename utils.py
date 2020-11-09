@@ -6,11 +6,11 @@ import requests
 import os
 import numpy as np
 import json
-#from numba import jit
 import bz2
 import plotly.graph_objs as go
 import plotly.express as px
 from multiprocessing import Pool, cpu_count
+from scipy.spatial import cKDTree
 
 
 apiURL = "https://api.mapbox.com/directions/v5/mapbox"
@@ -153,7 +153,6 @@ def process_radar_data(fnames):
     return lon_radar, lat_radar, time_radar, dtime_radar, rr
 
 
-#@jit(nopython=True)
 def extract_rain_rate_from_radar(lon_bike, lat_bike, dtime_bike, 
                                  lon_radar, lat_radar, dtime_radar, rr):
     """
@@ -190,6 +189,51 @@ def extract_rain_rate_from_radar(lon_bike, lat_bike, dtime_bike,
     #rain_bike = radar.z_to_r(radar.idecibel(rain_bike), a=256, b=1.42) # to mm/h
 
     return rain_bike
+
+
+def extract_rain_rate_from_radar_new(lon_bike, lat_bike, dtime_bike, 
+                                 lon_radar, lat_radar, dtime_radar, rr):
+    """
+    Given the longitude, latitude and timedelta objects of the radar and of the bike iterate through 
+    every point of the bike track and find closest point (in time/space) of the radar data. Then 
+    construct the rain_bike array by subsetting the rr array, that is the data from the radar.
+
+    Returns a numpy array with the rain forecast over the bike track.
+    """
+    combined_x_y_arrays = np.dstack([lon_radar.ravel(), lat_radar.ravel()])[0]
+    points_list = list(np.vstack([lon_bike, lat_bike]).T)
+
+    def do_kdtree(combined_x_y_arrays, points):
+        mytree = cKDTree(combined_x_y_arrays)
+        dist, indexes = mytree.query(points)
+        return indexes
+
+    results2 = do_kdtree(combined_x_y_arrays, points_list)
+    # As we have many duplicates since the itinerary has a much higher resolution that then radar
+    # we only select the unique points 
+    inds_itinerary = np.unique(results2)
+    lon_lat_itinerary = combined_x_y_arrays[inds_itinerary]
+
+    # Now find the closest points in the bike track 
+    combined_x_y_arrays = np.vstack([lon_bike, lat_bike]).T
+    points_list = list(lon_lat_itinerary)
+
+    results3 = do_kdtree(combined_x_y_arrays, points_list)
+    dtime_itinerary = dtime_bike[results3]
+    # find indices of these dtimes in radar dtime 
+    inds_dtime_radar = np.abs(np.subtract.outer(dtime_radar, dtime_itinerary)).argmin(0)
+
+    rain_bike = np.empty(shape=(len(shifts), len(inds_itinerary)))
+
+    for i, shift in enumerate(shifts):
+        temp = []
+        for i_time, i_space in zip(inds_dtime_radar, inds_itinerary):
+            temp.append(rr[i_time].ravel()[i_space])
+        rain_bike[i, :] = temp
+
+    rain_bike = ((10. ** ((rain_bike/2. - 32.5) / 10.)) / 256.) ** (1. / 1.42)
+
+    return rain_bike, dtime_itinerary
 
 
 def convert_to_dataframe(rain_bike, dtime_bike, time_radar):
