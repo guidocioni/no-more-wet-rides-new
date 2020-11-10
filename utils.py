@@ -231,7 +231,8 @@ def extract_rain_rate_from_radar_new(lon_bike, lat_bike, dtime_bike,
             temp.append(rr[i_time].ravel()[i_space])
         rain_bike[i, :] = temp
 
-    rain_bike = ((10. ** ((rain_bike/2. - 32.5) / 10.)) / 256.) ** (1. / 1.42)
+    rain_bike = ((10. ** ((rain_bike / 2. - 32.5) / 10.)) / 256.) ** (1. / 1.42)
+    rain_bike[rain_bike < 0.001] = 0
 
     return rain_bike, dtime_itinerary
 
@@ -350,29 +351,28 @@ def generate_map_plot(df):
             lat=lats,
             lon=lons,
             mode='lines',
-            line=dict(width=2),
+            line=dict(width=3, color='#778899'),
             marker=dict(
-                size=5,
+                size=5, color='#778899'
             ),
-        name='itinerary',
-        hovertext=[strfdelta(delta, fmt="{hours}h {minutes}m") 
+            name='itinerary',
+            hovertext=[strfdelta(delta, fmt="{hours}h {minutes}m") 
                    for delta in pd.to_timedelta(df.dtime, unit='s')]))
-        
+
         fig.add_trace(go.Scattermapbox(
             lat=[lats[0]],
             lon=[lons[0]],
             mode='markers',
-            marker=dict(
-                size=15,
-            ),name='Start',
-         hovertext=start_point))
+            marker=dict(size=15, color='lightsteelblue'),
+            name='Start',
+            hovertext=start_point))
 
         fig.add_trace(go.Scattermapbox(
             lat=[lats[-1]],
             lon=[lons[-1]],
             mode='markers',
             marker=dict(
-                size=15,
+                size=15, color='peachpuff'
             ),name='Destination',
          hovertext=end_point))
 
@@ -386,25 +386,15 @@ def generate_map_plot(df):
                     lon=center['lon']
                 ),
                 zoom=zoom
-            )
+            ),
+            margin={"r": 0, "t": 0, "l": 0, "b": 0},
+            height=300
         )
     else:# make an empty map
-        fig = go.Figure(go.Scattermapbox())
+        fig = make_empty_map()
 
-        fig.update_layout(
-            mapbox=dict(
-                accesstoken=apiKey,
-                center=go.layout.mapbox.Center(
-                    lat=51.326863,
-                    lon=10.354922
-                ),
-                zoom=4
-            )
-        )
-        
-    fig.update_layout(margin={"r": 0, "t": 0, "l": 0, "b": 0},
-        height=300)
     return fig
+
 
 def make_fig_time(df):
     if df is not None:
@@ -422,23 +412,58 @@ def make_fig_time(df):
                         rangemode = 'tozero'),
             legend=dict(
                   title=dict(text='leave at '),
-                  font=dict(size=10))
+                  font=dict(size=10)),
+                  height=390,
+                  margin={"r": 0.1, "t": 0.1, "l": 0.1, "b": 0.1},
+                  template='plotly_white',
         )
     else:
-        fig = go.Figure()
+        fig = make_empty_figure()
 
-        fig.add_annotation(x=2.5, y=1.5,
-            text="No data (yet 😃)",
-            showarrow=False,
-            font=dict(size=30))
+    return fig
+
+
+def make_fig_bars(df):
+    if df is not None:
+        df = df.rename(columns=lambda s: s.strftime('%H:%M')).sum()
+        values = df.values
+        labels = [str(value) + ' mm' for value in values.round(1)]
+        colors = ['peachpuff' if x == values.min() else 'lightsteelblue' for x in values]
+
+        fig = go.Figure(data=[go.Bar(
+            x=df.index, y=values,
+            text=labels,
+            textposition='auto',
+            opacity=1,
+            marker_color=colors
+        )])
 
         fig.update_layout(
-                xaxis=dict(
-                    visible=False
-                ),
-                yaxis=dict(
-                    visible=False)
+                          legend_orientation="h",
+                          xaxis=dict(title='Leave at..'),
+                          yaxis=dict(visible=False),
+                          showlegend=False,
+                          height=390,
+                          margin={"r": 0.1, "t": 0.1, "l": 0.1, "b": 0.1},
+                          template='plotly_white',
         )
+
+    return fig
+
+
+def make_empty_figure(text="No data (yet 😃)"):
+    '''Initialize an empty figure with style and a centered text'''
+    fig = go.Figure()
+
+    fig.add_annotation(x=2.5, y=1.5,
+                       text=text,
+                       showarrow=False,
+                       font=dict(size=30))
+
+    fig.update_layout(
+            xaxis=dict(visible=False),
+            yaxis=dict(visible=False)
+    )
 
     fig.update_layout(
         height=390,
@@ -446,5 +471,23 @@ def make_fig_time(df):
         template='plotly_white',
     )
 
-    
+    return fig
+
+
+def make_empty_map(lat_center=51.326863, lon_center=10.354922, zoom=4):
+    fig = go.Figure(go.Scattermapbox())
+
+    fig.update_layout(
+        mapbox=dict(
+            accesstoken=apiKey,
+            center=go.layout.mapbox.Center(
+                lat=lat_center,
+                lon=lon_center
+            ),
+            zoom=zoom,
+        ),
+        margin={"r": 0, "t": 0, "l": 0, "b": 0},
+        height=300
+    )
+
     return fig

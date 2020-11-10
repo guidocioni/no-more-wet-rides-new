@@ -64,10 +64,19 @@ map_card = dbc.Card(
 
 fig_card = dbc.Card(
     [
+        dbc.Checklist(
+            options=[
+                {"label": "More details", "value": "time_series"},
+            ],
+            value=[],
+            id="switches-input",
+            switch=True,
+        ),
         dcc.Graph(id='time-plot')
     ],
     className="mb-2"
 )
+
 
 help_card =  dbc.Card (  [
         dbc.CardBody(
@@ -91,7 +100,8 @@ app.layout = dbc.Container(
         html.Hr(),
         dbc.Alert("Since the radar only covers Germany and neighbouring countries the app will fail if you enter an address outside of this area", 
             color="warning",
-            dismissable=True),
+            dismissable=True,
+            duration=4000),
         dbc.Row(
             [
                 dbc.Col([
@@ -152,17 +162,25 @@ def create_coords_and_map(n_clicks, from_address, to_address, mode):
 
 @app.callback(
     Output("time-plot", "figure"),
-    [Input("intermediate-value", "children")]
+    [Input("intermediate-value", "children"),
+    Input("switches-input", "value")]
 )
-def func(data):
+def func(data, switch):
     df = pd.read_json(data, orient='split')
     if not df.empty:
-        # For now just read dummy df 
-        # df2 = utils.create_dummy_dataframe()
         out = get_data(df.lons.values, df.lats.values, df.dtime.values)
-        return utils.make_fig_time(out)
+        # Check if there is no rain at all before plotting 
+        if (out.sum() < 0.01).all():
+            return utils.make_empty_figure('🎉 Yey, no rain forecast on your ride 🎉')
+        else:
+            fig_time = utils.make_fig_time(out)
+            fig_bars = utils.make_fig_bars(out)
+        if switch == ['time_series']:
+            return fig_time
+        else:
+            return fig_bars
     else:
-        return utils.make_fig_time(None)
+        return utils.make_empty_figure()
 
 
 # Only retrieve directions if the inputs are changed,
