@@ -228,7 +228,7 @@ def extract_rain_rate_from_radar_new(lon_bike, lat_bike, dtime_bike,
     for i, shift in enumerate(shifts):
         temp = []
         for i_time, i_space in zip(inds_dtime_radar, inds_itinerary):
-            temp.append(rr[i_time].ravel()[i_space])
+            temp.append(rr[i_time+shift].ravel()[i_space])
         rain_bike[i, :] = temp
 
     rain_bike = ((10. ** ((rain_bike / 2. - 32.5) / 10.)) / 256.) ** (1. / 1.42)
