@@ -8,6 +8,7 @@ import json
 import pandas as pd
 from flask_caching import Cache
 from flask import request
+import plotly.graph_objs as go
 
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP],
                 url_base_pathname='/nmwr/',
@@ -153,7 +154,11 @@ def create_coords_and_map(n_clicks, from_address, to_address, mode):
                                'dtime': dtime.seconds.values,
                                'source': source,
                                'destination': dest})
-            return utils.generate_map_plot(df), df.to_json(date_format='iso', orient='split')
+            lon_to_plot, lat_to_plot, rain_to_plot = filter_radar_cached(lons, lats)
+            fig = utils.generate_map_plot(df)
+            fig.add_trace(go.Densitymapbox(lat=lat_to_plot, lon=lon_to_plot, z=rain_to_plot,
+                                 radius=5, showscale=False, hoverinfo='skip', zmin=1))
+            return fig, df.to_json(date_format='iso', orient='split')
         else:
             coords = {}
             y = json.dumps(coords)
@@ -199,13 +204,26 @@ def get_radar_data_cached():
     return utils.get_radar_data()
 
 
+@cache.memoize(300)
+def filter_radar_cached(lon_bike, lat_bike):
+    lon_radar, lat_radar, time_radar, _, rr = get_radar_data_cached()
+    indices = (lon_radar > (lon_bike.min() - 1)) & (lon_radar < (lon_bike.max() +1)) &\
+              (lat_radar > (lat_bike.min() - 1)) & (lat_radar < (lat_bike.max() +1))
+    lon_to_plot = lon_radar[indices]
+    lat_to_plot = lat_radar[indices]
+    rain_to_plot = rr[1, indices]
+    rain_to_plot = ((10. ** ((rain_to_plot/2. - 32.5) / 10.)) / 256.) ** (1. / 1.42)
+
+    return lon_to_plot, lat_to_plot, rain_to_plot
+
+
 @app.callback(
     Output("radar-data-2", "children"),
     [Input("from_address", "value")], prevent_initial_call=True
 )
 def fire_get_radar_data(from_address):
     if from_address is not None:
-        if len(from_address) < 6:
+        if len(from_address) != 6:
             raise dash.exceptions.PreventUpdate
         else:
             _, _, _, _, _ = get_radar_data_cached()
