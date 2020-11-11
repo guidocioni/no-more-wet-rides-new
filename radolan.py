@@ -458,6 +458,7 @@ def read_radolan_composite(f, missing=-9999, loaddata=True):
 
     return arr, attrs
 
+
 def idecibel(x):
     """Calculates the inverse of input decibel values
     :math:`z=10^{x \\over 10}`
@@ -498,6 +499,7 @@ def z_to_r(z, a=200., b=1.6):
         rainfall intensity in mm/h
     """
     return (z / a) ** (1. / b)
+
 
 def get_latlon_radar(file='radolan_grid.pickle'):
     import pickle

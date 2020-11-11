@@ -128,7 +128,7 @@ def process_radar_data(fnames):
      """
     data = []
     time_radar = []
-
+    # I tried to parallelize this but it actually becomes slower
     for fname in fnames:
         rxdata, rxattrs = radar.read_radolan_composite(fname)
         data.append(rxdata)
@@ -141,7 +141,7 @@ def process_radar_data(fnames):
 
     # Get rid of masking value, we have to check whether this cause problem
     # In this case missing data is treated as 0 (no precip.). Masked arrays
-    # cause too many problems. 
+    # cause too many problems.
     data[data == -9999] = 0.
     rr = data
 
@@ -153,6 +153,7 @@ def process_radar_data(fnames):
     return lon_radar, lat_radar, time_radar, dtime_radar, rr
 
 
+#outdated, really slow version
 def extract_rain_rate_from_radar(lon_bike, lat_bike, dtime_bike, 
                                  lon_radar, lat_radar, dtime_radar, rr):
     """
@@ -200,41 +201,46 @@ def extract_rain_rate_from_radar_new(lon_bike, lat_bike, dtime_bike,
 
     Returns a numpy array with the rain forecast over the bike track.
     """
-    combined_x_y_arrays = np.dstack([lon_radar.ravel(), lat_radar.ravel()])[0]
-    points_list = list(np.vstack([lon_bike, lat_bike]).T)
-
     def do_kdtree(combined_x_y_arrays, points):
-        mytree = cKDTree(combined_x_y_arrays)
+        mytree = cKDTree(combined_x_y_arrays,
+                     balanced_tree=False,# with the default it's slower
+                     compact_nodes=False)
         dist, indexes = mytree.query(points)
         return indexes
 
-    results2 = do_kdtree(combined_x_y_arrays, points_list)
-    # As we have many duplicates since the itinerary has a much higher resolution that then radar
-    # we only select the unique points 
-    inds_itinerary = np.unique(results2)
-    lon_lat_itinerary = combined_x_y_arrays[inds_itinerary]
-
-    # Now find the closest points in the bike track 
-    combined_x_y_arrays = np.vstack([lon_bike, lat_bike]).T
-    points_list = list(lon_lat_itinerary)
-
-    results3 = do_kdtree(combined_x_y_arrays, points_list)
-    dtime_itinerary = dtime_bike[results3]
-    # find indices of these dtimes in radar dtime 
-    inds_dtime_radar = np.abs(np.subtract.outer(dtime_radar, dtime_itinerary)).argmin(0)
-
-    rain_bike = np.empty(shape=(len(shifts), len(inds_itinerary)))
-
+    combined_x_y_arrays = np.dstack([lon_radar.ravel(),
+                                     lat_radar.ravel()])[0]
+    points_list = np.vstack([lon_bike, lat_bike]).T
+    # Construct a k-d Tree with the coordinate from the radar and look for nearest neighbours
+    # using the list of lat and lon from the track of the bike
+    inds_latlon_radar = do_kdtree(combined_x_y_arrays, points_list)
+    # To understand more build the following dataframe 
+    # df = pd.DataFrame({
+    #         'lon_bike' : lon_bike,
+    #         'lat_bike' : lat_bike,
+    #         'dtime_bike' : dtime_bike,
+    #         'lon_radar_closest' : lon_radar.ravel()[inds_latlon_radar],
+    #         'lat_radar_closest' : lat_radar.ravel()[inds_latlon_radar],
+    #         'lon_lat_radar_closest_index' : inds_latlon_radar,
+    #         'dtime_radar_closest' :  dtime_radar[np.abs(np.subtract.outer(dtime_radar, dtime_bike)).argmin(0)],
+    #         'dtime_radar_closest_index' : np.abs(np.subtract.outer(dtime_radar, dtime_bike)).argmin(0)
+    #         })
+    # Now find the radar forecast step closest to the dtime for the bike 
+    inds_dtime_radar = np.abs(np.subtract.outer(dtime_radar, dtime_bike)).argmin(0)
+    # Then finally loop and extract rain rate
+    rain_bike = np.empty(shape=(len(shifts),
+                                len(inds_latlon_radar)))
     for i, shift in enumerate(shifts):
         temp = []
-        for i_time, i_space in zip(inds_dtime_radar, inds_itinerary):
-            temp.append(rr[i_time+shift].ravel()[i_space])
+        for i_time, i_space in zip(inds_dtime_radar, inds_latlon_radar):
+            temp.append(rr[i_time + shift].ravel()[i_space])
         rain_bike[i, :] = temp
-
-    rain_bike = ((10. ** ((rain_bike / 2. - 32.5) / 10.)) / 256.) ** (1. / 1.42)
+    # Convert from reflectivity to rain rate
+    rain_bike = ((10. ** ((rain_bike / 2. - 32.5) / 10.)) / 256.)**(1. / 1.42)
+    # Remove values below a certain threshold
     rain_bike[rain_bike < 0.001] = 0
 
-    return rain_bike, dtime_itinerary
+    return rain_bike
 
 
 def convert_to_dataframe(rain_bike, dtime_bike, time_radar):
