@@ -9,6 +9,7 @@ import pandas as pd
 from flask_caching import Cache
 from flask import request
 import plotly.graph_objs as go
+from radolan import to_rain_rate
 
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP],
                 url_base_pathname='/nmwr/',
@@ -149,14 +150,15 @@ def create_coords_and_map(n_clicks, from_address, to_address, mode):
     else:
         if from_address is not None and to_address is not None:
             source, dest, lons, lats, dtime = get_directions(from_address, to_address, mode)
-            df = pd.DataFrame({'lons': lons, 
-                               'lats': lats, 
-                               'dtime': dtime.seconds.values,
+            df = pd.DataFrame({'lons': lons,
+                               'lats': lats,
+                               'dtime': dtime.seconds.values, #to avoid problems with json
                                'source': source,
                                'destination': dest})
-            lon_to_plot, lat_to_plot, rain_to_plot = filter_radar_cached(lons, lats)
+            lon_to_plot, lat_to_plot, _, _, rain_to_plot = filter_radar_cached(lons, lats)
+            rain_to_plot = to_rain_rate(rain_to_plot)
             fig = utils.generate_map_plot(df)
-            fig.add_trace(go.Densitymapbox(lat=lat_to_plot, lon=lon_to_plot, z=rain_to_plot,
+            fig.add_trace(go.Densitymapbox(lat=lat_to_plot, lon=lon_to_plot, z=rain_to_plot[0],
                                  radius=5, showscale=False, hoverinfo='skip', zmin=1))
             return fig, df.to_json(date_format='iso', orient='split')
         else:
@@ -173,8 +175,10 @@ def create_coords_and_map(n_clicks, from_address, to_address, mode):
 def func(data, switch):
     df = pd.read_json(data, orient='split')
     if not df.empty:
-        out = get_data(df.lons.values, df.lats.values, df.dtime.values)
-        # Check if there is no rain at all before plotting 
+        # convert dtime to timedelta to avoid problems 
+        df['dtime'] = pd.to_timedelta(df['dtime'], unit='s')
+        out = get_data(df.lons, df.lats, df.dtime)
+        # Check if there is no rain at all beargfore plotting 
         if (out.sum() < 0.01).all():
             return utils.make_empty_figure('🎉 Yey, no rain forecast on your ride 🎉')
         else:
@@ -196,8 +200,8 @@ def get_directions(from_address, to_address, mode):
 
 
 # Only update radar data every 5 minutes, although this is not
-# really 100% correct as we should check the remote version 
-# We should read the timestamp from the file and compare it with 
+# really 100% correct as we should check the remote version
+# We should read the timestamp from the file and compare it with
 # the server
 @cache.memoize(300)
 def get_radar_data_cached():
@@ -206,15 +210,14 @@ def get_radar_data_cached():
 
 @cache.memoize(300)
 def filter_radar_cached(lon_bike, lat_bike):
-    lon_radar, lat_radar, time_radar, _, rr = get_radar_data_cached()
-    indices = (lon_radar > (lon_bike.min() - 1)) & (lon_radar < (lon_bike.max() +1)) &\
-              (lat_radar > (lat_bike.min() - 1)) & (lat_radar < (lat_bike.max() +1))
-    lon_to_plot = lon_radar[indices]
-    lat_to_plot = lat_radar[indices]
-    rain_to_plot = rr[1, indices]
-    rain_to_plot = ((10. ** ((rain_to_plot/2. - 32.5) / 10.)) / 256.) ** (1. / 1.42)
+    lon_radar, lat_radar, time_radar, dtime_radar, rr = get_radar_data_cached()
+    lon_to_plot, lat_to_plot, rain_to_plot = utils.subset_radar_data(lon_radar,
+                                                                     lat_radar,
+                                                                     rr,
+                                                                     lon_bike,
+                                                                     lat_bike)
 
-    return lon_to_plot, lat_to_plot, rain_to_plot
+    return lon_to_plot, lat_to_plot, time_radar, dtime_radar, rain_to_plot
 
 
 @app.callback(
@@ -234,21 +237,17 @@ def fire_get_radar_data(from_address):
 
 @cache.memoize(300)
 def get_data(lons, lats, dtime):
-    lon_radar, lat_radar, time_radar, dtime_radar, rr = get_radar_data_cached()
+    lon_radar, lat_radar, time_radar, dtime_radar, rr = filter_radar_cached(lons, lats)
 
-    rain_bike = utils.extract_rain_rate_from_radar_new(lon_bike=lons, lat_bike=lats,
-                                                   dtime_bike=dtime,
-                                                   dtime_radar=dtime_radar.seconds.values,
-                                                   lat_radar=lat_radar,
-                                                   lon_radar=lon_radar,
-                                                   rr=rr)
-    # convert again the time of bike to datetime 
-    df = utils.convert_to_dataframe(rain_bike,
-                                    pd.to_timedelta(dtime, unit='s'),
-                                    time_radar)
+    df = utils.extract_rain_rate_from_radar(lon_bike=lons, lat_bike=lats,
+                                            dtime_bike=dtime,
+                                            time_radar=time_radar,
+                                            dtime_radar=dtime_radar,
+                                            lat_radar=lat_radar,
+                                            lon_radar=lon_radar,
+                                            rr=rr)
 
     return df
-
 
 
 @server.route('/nmwr/query', methods=['GET', 'POST'])
@@ -263,7 +262,7 @@ def query():
         else:
             source, dest, lons, lats, dtime =  get_directions(from_address, to_address, mode='cycling')
         # compute the data from radar, the result is cached 
-        out = get_data(lons, lats, dtime.seconds.values)
+        out = get_data(lons, lats, dtime)
         out['source'] = source
         out['destination'] = dest
         return out.to_json(orient='split', date_format='iso')

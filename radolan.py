@@ -500,6 +500,14 @@ def z_to_r(z, a=200., b=1.6):
     """
     return (z / a) ** (1. / b)
 
+def to_rain_rate(z):
+    '''Conversion between radar units and mm/h. Don't know anymore where I
+    found all the parts of this formula'''
+    rain = ((10. ** ((z / 2. - 32.5) / 10.)) / 256.)**(1. / 1.42)
+    rain[rain < 0.001] = 0
+
+    return rain
+
 
 def get_latlon_radar(file='radolan_grid.pickle'):
     import pickle

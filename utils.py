@@ -153,94 +153,68 @@ def process_radar_data(fnames):
     return lon_radar, lat_radar, time_radar, dtime_radar, rr
 
 
-#outdated, really slow version
-def extract_rain_rate_from_radar(lon_bike, lat_bike, dtime_bike, 
-                                 lon_radar, lat_radar, dtime_radar, rr):
-    """
-    Given the longitude, latitude and timedelta objects of the radar and of the bike iterate through 
-    every point of the bike track and find closest point (in time/space) of the radar data. Then 
-    construct the rain_bike array by subsetting the rr array, that is the data from the radar.
-
-    Returns a numpy array with the rain forecast over the bike track.
-    """
-    rain_bike = np.empty(shape=(len(shifts), len(dtime_bike))) # Initialize the array
-    for i, shift in enumerate(shifts):
-        temp = []
-        for lat_b, lon_b, dtime_b in zip(lat_bike, lon_bike, dtime_bike):
-            # Find the index where the two timedeltas object are the same,
-            # note that we can use this as both time from the radar
-            # and the bike are already converted to timedelta, which makes
-            # the comparison quite easy!
-            ind_time = np.argmin(np.abs(dtime_radar - dtime_b))
-            # Find also the closest point in space between radar and the
-            # track from the bike. 
-            dist = np.sqrt((lon_radar-lon_b)**2+(lat_radar-lat_b)**2)
-            indx, indy = dist.argmin()//dist.shape[1], dist.argmin()%dist.shape[1]
-            # Finally append the subsetted value to the array
-            temp.append(rr[ind_time+shift, indx, indy])
-        # iterate over all the shifts
-        rain_bike[i, :] = temp
-
-    #rain_bike = rain_bike/2. - 32.5 # to corrected units 
-    #rain_bike = 10. ** (rain_bike / 10.) # to dbz
-    #rain_bike = (rain_bike / 256.) ** (1. / 1.42) # to mm/h
-    # All together 
-    rain_bike = ((10. ** ((rain_bike/2. - 32.5) / 10.)) / 256.) ** (1. / 1.42)
-    # With functions but doesn't work with numba
-    #rain_bike = radar.z_to_r(radar.idecibel(rain_bike), a=256, b=1.42) # to mm/h
-
-    return rain_bike
-
-
-def extract_rain_rate_from_radar_new(lon_bike, lat_bike, dtime_bike, 
-                                 lon_radar, lat_radar, dtime_radar, rr):
-    """
-    Given the longitude, latitude and timedelta objects of the radar and of the bike iterate through 
-    every point of the bike track and find closest point (in time/space) of the radar data. Then 
-    construct the rain_bike array by subsetting the rr array, that is the data from the radar.
-
-    Returns a numpy array with the rain forecast over the bike track.
-    """
-    def do_kdtree(combined_x_y_arrays, points):
-        mytree = cKDTree(combined_x_y_arrays,
+def do_kdtree(combined_x_y_arrays, points):
+    mytree = cKDTree(combined_x_y_arrays,
                      balanced_tree=False,# with the default it's slower
                      compact_nodes=False)
-        dist, indexes = mytree.query(points)
-        return indexes
+    dist, indexes = mytree.query(points)
+    return indexes
 
-    combined_x_y_arrays = np.dstack([lon_radar.ravel(),
-                                     lat_radar.ravel()])[0]
+
+def extract_rain_rate_from_radar(lon_bike, lat_bike, dtime_bike, time_radar,
+                                 lon_radar, lat_radar, dtime_radar, rr):
+    """
+    Given the longitude, latitude and timedelta objects of the radar and of the bike iterate through 
+    every point of the bike track and find closest point (in time/space) of the radar data. Then 
+    construct the rain_bike array by subsetting the rr array, that is the data from the radar.
+
+    Returns a dataframe with the rain rate prediction
+    """
+    combined_x_y_arrays = np.dstack([lon_radar,
+                                     lat_radar])[0]
     points_list = np.vstack([lon_bike, lat_bike]).T
     # Construct a k-d Tree with the coordinate from the radar and look for nearest neighbours
     # using the list of lat and lon from the track of the bike
     inds_latlon_radar = do_kdtree(combined_x_y_arrays, points_list)
-    # To understand more build the following dataframe 
-    # df = pd.DataFrame({
-    #         'lon_bike' : lon_bike,
-    #         'lat_bike' : lat_bike,
-    #         'dtime_bike' : dtime_bike,
-    #         'lon_radar_closest' : lon_radar.ravel()[inds_latlon_radar],
-    #         'lat_radar_closest' : lat_radar.ravel()[inds_latlon_radar],
-    #         'lon_lat_radar_closest_index' : inds_latlon_radar,
-    #         'dtime_radar_closest' :  dtime_radar[np.abs(np.subtract.outer(dtime_radar, dtime_bike)).argmin(0)],
-    #         'dtime_radar_closest_index' : np.abs(np.subtract.outer(dtime_radar, dtime_bike)).argmin(0)
-    #         })
-    # Now find the radar forecast step closest to the dtime for the bike 
-    inds_dtime_radar = np.abs(np.subtract.outer(dtime_radar, dtime_bike)).argmin(0)
+    # Now find the radar forecast step closest to the dtime for the bike
+    inds_dtime_radar = np.abs(np.subtract.outer(dtime_radar.values, 
+                                                dtime_bike.values)).argmin(0)
     # Then finally loop and extract rain rate
     rain_bike = np.empty(shape=(len(shifts),
                                 len(inds_latlon_radar)))
     for i, shift in enumerate(shifts):
         temp = []
         for i_time, i_space in zip(inds_dtime_radar, inds_latlon_radar):
-            temp.append(rr[i_time + shift].ravel()[i_space])
+            temp.append(rr[i_time + shift][i_space])
         rain_bike[i, :] = temp
+    # We only want points that have meaningful radar information and not duplicates
+    # We use a combination of time & space
+    id_radar_data = inds_latlon_radar + inds_dtime_radar
+    shifted = np.append(id_radar_data[1:], -1)
+    # (id_radar_data != shifted) allows us to select the first
+    # element of a duplicates sequence 
+    rain_bike = rain_bike[:, id_radar_data != shifted]
+    dtime_bike = dtime_bike[id_radar_data != shifted]
     # Convert from reflectivity to rain rate
-    rain_bike = ((10. ** ((rain_bike / 2. - 32.5) / 10.)) / 256.)**(1. / 1.42)
-    # Remove values below a certain threshold
-    rain_bike[rain_bike < 0.001] = 0
+    rain_bike = radar.to_rain_rate(rain_bike)
 
-    return rain_bike
+    df = convert_to_dataframe(rain_bike, dtime_bike, time_radar)
+
+    return df
+
+
+def subset_radar_data(lon_radar, lat_radar, rr, lons, lats, offset=1):
+    '''Subset radar data over boundaries defined by bounds
+    bounds = [lon_min, lon_max, lat_min, lat_max]'''
+    lon_min = lons.min() - offset
+    lon_max = lons.max() + offset
+    lat_min = lats.min() - offset
+    lat_max = lats.max() + offset
+
+    indices = (lon_radar > (lon_min)) & (lon_radar < (lon_max)) &\
+              (lat_radar > (lat_min)) & (lat_radar < (lat_max))
+
+    return lon_radar[indices], lat_radar[indices], rr[:, indices]
 
 
 def convert_to_dataframe(rain_bike, dtime_bike, time_radar):
@@ -248,7 +222,13 @@ def convert_to_dataframe(rain_bike, dtime_bike, time_radar):
     Convert the forecast in a well-formatted dataframe which can then be plotted or converted 
     to another format.
     """
-    df = pd.DataFrame(data=rain_bike.T, index=dtime_bike, columns=time_radar[np.array(shifts)]) 
+    df = pd.DataFrame(data=rain_bike.T, index=dtime_bike,
+                      columns=time_radar[np.array(shifts)])
+    # Scale data to mm/h by correctly using the time elapsed between two trajectory points
+    df['difference_hours'] = np.insert((np.diff(df.index.seconds) / 3600.), 0, 0)
+    df.loc[:, df.columns[df.columns != 'difference_hours']] = \
+        df.loc[:, df.columns[df.columns != 'difference_hours']].multiply(df["difference_hours"], axis="index")
+    df = df.drop(columns='difference_hours')
 
     return df
 
