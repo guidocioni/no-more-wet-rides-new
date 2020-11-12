@@ -10,6 +10,11 @@ from flask_caching import Cache
 from flask import request
 import plotly.graph_objs as go
 from radolan import to_rain_rate
+import platform, multiprocessing
+
+if platform.system() == "Darwin":
+    multiprocessing.set_start_method('forkserver')
+
 
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP],
                 url_base_pathname='/nmwr/',
@@ -155,11 +160,14 @@ def create_coords_and_map(n_clicks, from_address, to_address, mode):
                                'dtime': dtime.seconds.values, #to avoid problems with json
                                'source': source,
                                'destination': dest})
-            lon_to_plot, lat_to_plot, _, _, rain_to_plot = filter_radar_cached(lons, lats)
+            lon_to_plot, lat_to_plot, time_radar, _, rain_to_plot = filter_radar_cached(lons, lats)
             rain_to_plot = to_rain_rate(rain_to_plot)
             fig = utils.generate_map_plot(df)
             fig.add_trace(go.Densitymapbox(lat=lat_to_plot, lon=lon_to_plot, z=rain_to_plot[0],
-                                 radius=15, showscale=False, hoverinfo='skip', zmin=1))
+                                 radius=20, showscale=False, hoverinfo='skip', zmin=1))
+            fig.add_annotation(text='Radar data: '+ time_radar[0].strftime('%d %b %y, %H:%M'),
+                  xref="paper", yref="paper",
+                  x=0, y=1, showarrow=False)
             return fig, df.to_json(date_format='iso', orient='split')
         else:
             coords = {}

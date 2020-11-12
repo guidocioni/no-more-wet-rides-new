@@ -413,7 +413,7 @@ def make_fig_bars(df):
     if df is not None:
         df = df.rename(columns=lambda s: s.strftime('%H:%M')).sum()
         values = df.values
-        labels = [str(value) + ' mm' for value in values.round(1)]
+        labels = ['%.1g mm' % value for value in values]
         colors = ['peachpuff' if x == values.min() else 'lightsteelblue' for x in values]
 
         fig = go.Figure(data=[go.Bar(
