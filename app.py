@@ -159,7 +159,7 @@ def create_coords_and_map(n_clicks, from_address, to_address, mode):
             rain_to_plot = to_rain_rate(rain_to_plot)
             fig = utils.generate_map_plot(df)
             fig.add_trace(go.Densitymapbox(lat=lat_to_plot, lon=lon_to_plot, z=rain_to_plot[0],
-                                 radius=5, showscale=False, hoverinfo='skip', zmin=1))
+                                 radius=15, showscale=False, hoverinfo='skip', zmin=1))
             return fig, df.to_json(date_format='iso', orient='split')
         else:
             coords = {}
@@ -170,7 +170,7 @@ def create_coords_and_map(n_clicks, from_address, to_address, mode):
 @app.callback(
     Output("time-plot", "figure"),
     [Input("intermediate-value", "children"),
-    Input("switches-input", "value")]
+     Input("switches-input", "value")]
 )
 def func(data, switch):
     df = pd.read_json(data, orient='split')
@@ -182,12 +182,10 @@ def func(data, switch):
         if (out.sum() < 0.01).all():
             return utils.make_empty_figure('🎉 Yey, no rain forecast on your ride 🎉')
         else:
-            fig_time = utils.make_fig_time(out)
-            fig_bars = utils.make_fig_bars(out)
-        if switch == ['time_series']:
-            return fig_time
-        else:
-            return fig_bars
+            if switch == ['time_series']:
+                return utils.make_fig_time(out)
+            else:
+                return utils.make_fig_bars(out)
     else:
         return utils.make_empty_figure()
 
