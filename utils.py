@@ -17,8 +17,10 @@ import dash_html_components as html
 
 apiURL = "https://api.mapbox.com/directions/v5/mapbox"
 apiKey = os.environ['MAPBOX_KEY']
-mapURL = 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png'
-attribution = '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> '
+
+# mapURL = 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png'
+mapURL = 'https://api.mapbox.com/styles/v1/mapbox/dark-v10/tiles/{z}/{x}/{y}{r}?access_token=' + apiKey
+attribution = '© <a href="https://www.mapbox.com/feedback/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 
 # Here set the shifts (in units of 5 minutes per shift) for the final forecast
 shifts = (1, 3, 5, 7, 9)
@@ -355,7 +357,7 @@ def generate_map_plot(df):
                                    width_to_height=8)
 
         fig = [dl.Map([
-                dl.TileLayer(url=mapURL, attribution=attribution),
+                dl.TileLayer(url=mapURL, attribution=attribution, tileSize=512, zoomOffset=-1),
                 dl.LayerGroup(id="layer"),
                 dl.WMSTileLayer(url="https://maps.dwd.de/geoserver/ows?",
                                 layers="dwd:RX-Produkt", 
@@ -456,7 +458,7 @@ def make_empty_figure(text="No data (yet 😃)"):
 
 def make_empty_map(lat_center=51.326863, lon_center=10.354922, zoom=5):
     fig = [dl.Map([
-                dl.TileLayer(url=mapURL, attribution=attribution),
+                dl.TileLayer(url=mapURL, attribution=attribution, tileSize=512, zoomOffset=-1),
                 dl.LayerGroup(id="layer"),
                 dl.WMSTileLayer(url="https://maps.dwd.de/geoserver/ows?",
                                                 layers="dwd:RX-Produkt", 
