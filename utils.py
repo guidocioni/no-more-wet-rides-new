@@ -11,10 +11,14 @@ import plotly.graph_objs as go
 import plotly.express as px
 from multiprocessing import Pool, cpu_count
 from scipy.spatial import cKDTree
+import dash_leaflet as dl
+import dash_html_components as html
 
 
 apiURL = "https://api.mapbox.com/directions/v5/mapbox"
 apiKey = os.environ['MAPBOX_KEY']
+mapURL = 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png'
+attribution = '&copy; <a href="https://stadiamaps.com/">Stadia Maps</a> '
 
 # Here set the shifts (in units of 5 minutes per shift) for the final forecast
 shifts = (1, 3, 5, 7, 9)
@@ -53,6 +57,19 @@ def get_place_address(place):
     lon, lat = json_data['features'][0]['center']
 
     return place_name, lon, lat
+
+
+def get_place_address_reverse(lon, lat):
+    apiURL_places = "https://api.mapbox.com/geocoding/v5/mapbox.places"
+
+    url = "%s/%s,%s.json?&access_token=%s&country=DE&types=address" % (apiURL_places, lon, lat, apiKey)
+
+    response = requests.get(url)
+    json_data = json.loads(response.text)
+
+    place_name = json_data['features'][0]['place_name']
+
+    return place_name
 
 
 def distance_km(lon1, lon2, lat1, lat2):
@@ -328,54 +345,28 @@ def generate_map_plot(df):
     if df is not None:
         lons = df.lons.values
         lats = df.lats.values
+        trajectory = np.vstack([lats, lons]).T.tolist()
         start_point = df.source.values[0]
         end_point = df.destination.values[0]
         zoom, center = zoom_center(lons, lats,
                                    width_to_height=8)
 
-        fig = go.Figure(go.Scattermapbox(
-            lat=lats,
-            lon=lons,
-            mode='lines',
-            line=dict(width=3, color='#778899'),
-            marker=dict(
-                size=5, color='#778899'
-            ),
-            name='itinerary',
-            hovertext=[strfdelta(delta, fmt="{hours}h {minutes}m") 
-                   for delta in pd.to_timedelta(df.dtime, unit='s')]))
-
-        fig.add_trace(go.Scattermapbox(
-            lat=[lats[0]],
-            lon=[lons[0]],
-            mode='markers',
-            marker=dict(size=15, color='lightsteelblue'),
-            name='Start',
-            hovertext=start_point))
-
-        fig.add_trace(go.Scattermapbox(
-            lat=[lats[-1]],
-            lon=[lons[-1]],
-            mode='markers',
-            marker=dict(
-                size=15, color='peachpuff'
-            ),name='Destination',
-         hovertext=end_point))
-
-        fig.update_layout(
-            showlegend=False,
-            hovermode='closest',
-            mapbox=dict(
-                accesstoken=apiKey,
-                center=go.layout.mapbox.Center(
-                    lat=center['lat'],
-                    lon=center['lon']
-                ),
-                zoom=zoom
-            ),
-            margin={"r": 0, "t": 0, "l": 0, "b": 0},
-            height=300
-        )
+        fig = [dl.Map([
+                dl.TileLayer(url=mapURL, attribution=attribution),
+                dl.LayerGroup(id="layer"),
+                dl.WMSTileLayer(url="https://maps.dwd.de/geoserver/ows?",
+                                layers="dwd:RX-Produkt", 
+                                format="image/png", 
+                                transparent=True, opacity=0.7),
+                dl.LocateControl(options={'locateOptions': {'enableHighAccuracy': True}}),
+                dl.Polyline(positions=trajectory),
+                dl.Marker(position=trajectory[0], children=dl.Tooltip(start_point)),
+                dl.Marker(position=trajectory[-1], children=dl.Tooltip(end_point))
+                    ],
+               center=[center['lat'], center['lon']],
+               zoom=zoom,
+               style={'width': '100%', 'height': '45vh', 'margin': "auto", "display": "block"},
+               id='map')]
     else:# make an empty map
         fig = make_empty_map()
 
@@ -460,20 +451,20 @@ def make_empty_figure(text="No data (yet 😃)"):
     return fig
 
 
-def make_empty_map(lat_center=51.326863, lon_center=10.354922, zoom=4):
-    fig = go.Figure(go.Scattermapbox())
-
-    fig.update_layout(
-        mapbox=dict(
-            accesstoken=apiKey,
-            center=go.layout.mapbox.Center(
-                lat=lat_center,
-                lon=lon_center
-            ),
-            zoom=zoom,
-        ),
-        margin={"r": 0, "t": 0, "l": 0, "b": 0},
-        height=300
-    )
+def make_empty_map(lat_center=51.326863, lon_center=10.354922, zoom=5):
+    fig = [dl.Map([
+                dl.TileLayer(url=mapURL, attribution=attribution),
+                dl.LayerGroup(id="layer"),
+                dl.WMSTileLayer(url="https://maps.dwd.de/geoserver/ows?",
+                                                layers="dwd:RX-Produkt", 
+                                                format="image/png", 
+                                                transparent=True, opacity=0.7,
+                                                version='1.3.0',
+                                                detectRetina=True),
+                dl.LocateControl(options={'locateOptions': {'enableHighAccuracy': True}}),
+                    ],
+               center=[lat_center, lon_center], zoom=zoom,
+               style={'width': '100%', 'height': '45vh', 'margin': "auto", "display": "block"},
+               id='map')]
 
     return fig

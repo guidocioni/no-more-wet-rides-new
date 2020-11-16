@@ -8,15 +8,16 @@ import json
 import pandas as pd
 from flask_caching import Cache
 from flask import request
-import plotly.graph_objs as go
-from radolan import to_rain_rate
 import platform, multiprocessing
+import dash_leaflet as dl
+
 
 if platform.system() == "Darwin":
     multiprocessing.set_start_method('forkserver')
 
 
-app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP],
+app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP,
+            'https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css'],
                 url_base_pathname='/nmwr/',
                 meta_tags=[{'name': 'viewport', 
                             'content': 'width=device-width, initial-scale=1'}])
@@ -32,14 +33,16 @@ controls = dbc.Card(
         dbc.InputGroup(
             [
                 dbc.InputGroupAddon("from", addon_type="prepend"),
-                dbc.Input(placeholder="address in Germany", id='from_address', type='text'),
+                dbc.Input(placeholder="type address or get current location on map", id='from_address', 
+                          type='text', autoComplete=True),
             ],
             className="mb-2",
         ),
         dbc.InputGroup(
             [
                 dbc.InputGroupAddon("to", addon_type="prepend"),
-                dbc.Input(placeholder="address in Germany", id='to_address', type='text'),
+                dbc.Input(placeholder="type address or click on map", id='to_address',
+                          type='text', autoComplete=True),
             ],
             className="mb-2",
         ),
@@ -64,7 +67,7 @@ controls = dbc.Card(
 
 map_card = dbc.Card(
     [
-        dcc.Graph(id='map-plot')
+        html.Div(id='map-div')
     ],
    className="mb-2"
 )
@@ -140,7 +143,7 @@ app.layout = dbc.Container(
 
 
 @app.callback(
-    [Output("map-plot", "figure"),
+    [Output("map-div", "children"),
      Output('intermediate-value', 'children')],
     [Input("generate-button", "n_clicks")],
     [State("from_address", "value"),
@@ -157,17 +160,11 @@ def create_coords_and_map(n_clicks, from_address, to_address, mode):
             source, dest, lons, lats, dtime = get_directions(from_address, to_address, mode)
             df = pd.DataFrame({'lons': lons,
                                'lats': lats,
-                               'dtime': dtime.seconds.values, #to avoid problems with json
+                               # to avoid problems with json
+                               'dtime': dtime.seconds.values,
                                'source': source,
                                'destination': dest})
-            lon_to_plot, lat_to_plot, time_radar, _, rain_to_plot = filter_radar_cached(lons, lats)
-            rain_to_plot = to_rain_rate(rain_to_plot)
             fig = utils.generate_map_plot(df)
-            fig.add_trace(go.Densitymapbox(lat=lat_to_plot, lon=lon_to_plot, z=rain_to_plot[0],
-                                 radius=20, showscale=False, hoverinfo='skip', zmin=1))
-            fig.add_annotation(text='Radar data: '+ time_radar[0].strftime('%d %b %y, %H:%M'),
-                  xref="paper", yref="paper",
-                  x=0, y=1, showarrow=False)
             return fig, df.to_json(date_format='iso', orient='split')
         else:
             coords = {}
@@ -181,19 +178,22 @@ def create_coords_and_map(n_clicks, from_address, to_address, mode):
      Input("switches-input", "value")]
 )
 def func(data, switch):
-    df = pd.read_json(data, orient='split')
-    if not df.empty:
-        # convert dtime to timedelta to avoid problems 
-        df['dtime'] = pd.to_timedelta(df['dtime'], unit='s')
-        out = get_data(df.lons, df.lats, df.dtime)
-        # Check if there is no rain at all beargfore plotting 
-        if (out.sum() < 0.01).all():
-            return utils.make_empty_figure('🎉 Yey, no rain forecast on your ride 🎉')
-        else:
-            if switch == ['time_series']:
-                return utils.make_fig_time(out)
+    if data is not None:
+        df = pd.read_json(data, orient='split')
+        if not df.empty:
+            # convert dtime to timedelta to avoid problems 
+            df['dtime'] = pd.to_timedelta(df['dtime'], unit='s')
+            out = get_data(df.lons, df.lats, df.dtime)
+            # Check if there is no rain at all beargfore plotting 
+            if (out.sum() < 0.01).all():
+                return utils.make_empty_figure('🎉 Yey, no rain forecast on your ride 🎉')
             else:
-                return utils.make_fig_bars(out)
+                if switch == ['time_series']:
+                    return utils.make_fig_time(out)
+                else:
+                    return utils.make_fig_bars(out)
+        else:
+            return utils.make_empty_figure()
     else:
         return utils.make_empty_figure()
 
@@ -212,6 +212,25 @@ def get_directions(from_address, to_address, mode):
 @cache.memoize(300)
 def get_radar_data_cached():
     return utils.get_radar_data()
+
+
+@app.callback(
+    Output("from_address", "value"), 
+    [Input("map", "location_lat_lon_acc")],
+    prevent_initial_call=True)
+def update_location(location):
+    return utils.get_place_address_reverse(location[1], location[0])
+
+
+@app.callback(
+    [Output("layer", "children"),
+     Output("to_address", "value")],
+    [Input("map", "click_lat_lng")],
+    prevent_initial_call=True)
+def map_click(click_lat_lng):
+    if click_lat_lng is not None:
+        address = utils.get_place_address_reverse(click_lat_lng[1], click_lat_lng[0])
+        return [dl.Marker(position=click_lat_lng, children=dl.Tooltip(address))], address
 
 
 @cache.memoize(300)
