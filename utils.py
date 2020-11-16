@@ -202,7 +202,10 @@ def extract_rain_rate_from_radar(lon_bike, lat_bike, dtime_bike, time_radar,
     for i, shift in enumerate(shifts):
         temp = []
         for i_time, i_space in zip(inds_dtime_radar, inds_latlon_radar):
-            temp.append(rr[i_time + shift][i_space])
+            if i_time + shift < rr.shape[0]:
+                temp.append(rr[i_time + shift][i_space])
+            else:
+                temp.append(np.nan)
         rain_bike[i, :] = temp
     # We only want points that have meaningful radar information and not duplicates
     # We use a combination of time & space

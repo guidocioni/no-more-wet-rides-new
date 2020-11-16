@@ -111,7 +111,12 @@ app.layout = dbc.Container(
         dbc.Alert("Since the radar only covers Germany and neighbouring countries the app will fail if you enter an address outside of this area", 
             color="warning",
             dismissable=True,
-            duration=4000),
+            duration=5000),
+        dbc.Alert("Your ride duration exceeds the radar forecast horizon. Results will only be partial! Click on \"more details\" in the plot to show the used data.",
+            dismissable=True,
+            color="warning",
+            is_open=False,
+            id='long-ride-alert'),
         dbc.Row(
             [
                 dbc.Col([
@@ -196,6 +201,26 @@ def func(data, switch):
             return utils.make_empty_figure()
     else:
         return utils.make_empty_figure()
+
+
+@app.callback(
+    Output("long-ride-alert", "is_open"),
+    [Input("intermediate-value", "children")],
+    prevent_initial_call=True
+)
+def show_long_ride_warning(data):
+    if data is not None:
+        df = pd.read_json(data, orient='split')
+        if not df.empty:
+            df['dtime'] = pd.to_timedelta(df['dtime'], unit='s')
+            if (df['dtime'] > pd.to_timedelta('120min')).any():
+                return True
+            else:
+                return False
+        else:
+            raise dash.exceptions.PreventUpdate
+    else:
+        raise dash.exceptions.PreventUpdate
 
 
 # Only retrieve directions if the inputs are changed,
