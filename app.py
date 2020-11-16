@@ -213,7 +213,7 @@ def show_long_ride_warning(data):
         df = pd.read_json(data, orient='split')
         if not df.empty:
             df['dtime'] = pd.to_timedelta(df['dtime'], unit='s')
-            if (df['dtime'] > pd.to_timedelta('120min')).any():
+            if (df['dtime'] + pd.to_timedelta('%smin' % utils.shifts[-1]*5) > pd.to_timedelta('120min')).any():
                 return True
             else:
                 return False
@@ -244,7 +244,10 @@ def get_radar_data_cached():
     [Input("map", "location_lat_lon_acc")],
     prevent_initial_call=True)
 def update_location(location):
-    return utils.get_place_address_reverse(location[1], location[0])
+    if location is not None:
+        return utils.get_place_address_reverse(location[1], location[0])
+    else:
+        raise dash.exceptions.PreventUpdate
 
 
 @app.callback(
@@ -256,6 +259,8 @@ def map_click(click_lat_lng):
     if click_lat_lng is not None:
         address = utils.get_place_address_reverse(click_lat_lng[1], click_lat_lng[0])
         return [dl.Marker(position=click_lat_lng, children=dl.Tooltip(address))], address
+    else:
+        raise dash.exceptions.PreventUpdate
 
 
 @cache.memoize(300)
