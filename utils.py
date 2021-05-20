@@ -12,7 +12,7 @@ import plotly.express as px
 from multiprocessing import Pool, cpu_count
 from scipy.spatial import cKDTree
 import dash_leaflet as dl
-import dash_html_components as html
+import tarfile
 
 
 apiURL = "https://api.mapbox.com/directions/v5/mapbox"
@@ -27,7 +27,7 @@ shifts = (1, 3, 5, 7, 9)
 
 
 def mapbox_parser(start_point, end_point, mode='cycling'):
-    #TODO - Interpolate output to have equally spaced points
+    # TODO - Interpolate output to have equally spaced points
     sourcePlace, sourceLon, sourceLat = get_place_address(start_point)
     destPlace, destLon, destLat = get_place_address(end_point)
 
@@ -50,7 +50,8 @@ def mapbox_parser(start_point, end_point, mode='cycling'):
 def get_place_address(place):
     apiURL_places = "https://api.mapbox.com/geocoding/v5/mapbox.places"
 
-    url = "%s/%s.json?&access_token=%s&country=DE" % (apiURL_places, place, apiKey)
+    url = "%s/%s.json?&access_token=%s&country=DE" % (
+        apiURL_places, place, apiKey)
 
     response = requests.get(url)
     json_data = json.loads(response.text)
@@ -64,7 +65,8 @@ def get_place_address(place):
 def get_place_address_reverse(lon, lat):
     apiURL_places = "https://api.mapbox.com/geocoding/v5/mapbox.places"
 
-    url = "%s/%s,%s.json?&access_token=%s&country=DE&types=address" % (apiURL_places, lon, lat, apiKey)
+    url = "%s/%s,%s.json?&access_token=%s&country=DE&types=address" % (
+        apiURL_places, lon, lat, apiKey)
 
     response = requests.get(url)
     json_data = json.loads(response.text)
@@ -76,7 +78,7 @@ def get_place_address_reverse(lon, lat):
 
 def distance_km(lon1, lon2, lat1, lat2):
     '''Returns the distance (in km) between two array of points'''
-    radius = 6371 # km
+    radius = 6371  # km
 
     dlat = np.deg2rad(lat2 - lat1)
     dlon = np.deg2rad(lon2 - lon1)
@@ -106,34 +108,30 @@ def strfdelta(tdelta, fmt):
 
 
 def download_extract_url(url, data_path='/tmp/'):
-    filename = data_path + os.path.basename(url).replace('.bz2','')
-
+    # Download and extract bz2
+    filename = data_path + os.path.basename(url).replace('.bz2', '')
     r = requests.get(url, stream=True)
     if r.status_code == requests.codes.ok:
         with r.raw as source, open(filename, 'wb') as dest:
             dest.write(bz2.decompress(source.read()))
-        extracted_files = filename
     else:
         r.raise_for_status()
+    # Extract tar
+    tar_file = tarfile.open(filename)
+    extracted_files = tar_file.getnames()
+    tar_file.extractall(data_path)
+    extracted_files = [f'{data_path}{s}' for s in extracted_files]
 
     return extracted_files
 
 
 def get_radar_data(data_path='/tmp/',
-                   base_radar_url = "https://opendata.dwd.de/weather/radar/composit/wn/",
-                   steps=np.arange(0, 125, 5)):
+                   base_radar_url="https://opendata.dwd.de/weather/radar/composit/wn/"):
     # Get a list of the files to be downloaded
-    files = [base_radar_url + 'WN_LATEST_%03d.bz2' % step for step in steps]
+    files = 'WN_LATEST.tar.bz2'
 
-    extracted_files = []
-    # Add check on remote size, local size 
-    # for file in files:
-    #     extracted_files.append(download_extract_url(file))
-
-    pool = Pool(cpu_count())
-    extracted_files = pool.map(download_extract_url, files)
-    pool.close()
-    pool.join()
+    extracted_files = download_extract_url(
+        f"{base_radar_url}{files}", data_path)
 
     return process_radar_data(extracted_files)
 
@@ -151,11 +149,11 @@ def process_radar_data(fnames):
     for fname in fnames:
         rxdata, rxattrs = radar.read_radolan_composite(fname)
         data.append(rxdata)
-        minute = int(re.findall(r'(?:\d{3})', fname)[0])
+        minute = int(re.findall(r'(?:_)(\d{3})', fname)[0])
         time_radar.append((rxattrs['datetime'] + timedelta(minutes=minute)))
 
-    # Conversion to numpy array 
-    # !!! The conversion to mm/h is done afterwards to avoid memory usage !!! 
+    # Conversion to numpy array
+    # !!! The conversion to mm/h is done afterwards to avoid memory usage !!!
     data = np.array(data)
 
     # Get rid of masking value, we have to check whether this cause problem
@@ -166,7 +164,7 @@ def process_radar_data(fnames):
 
     # Get coordinates (space/time)
     lon_radar, lat_radar = radar.get_latlon_radar()
-    time_radar  = convert_timezone(pd.to_datetime(time_radar))
+    time_radar = convert_timezone(pd.to_datetime(time_radar))
     dtime_radar = time_radar - time_radar[0]
 
     return lon_radar, lat_radar, time_radar, dtime_radar, rr
@@ -174,7 +172,7 @@ def process_radar_data(fnames):
 
 def do_kdtree(combined_x_y_arrays, points):
     mytree = cKDTree(combined_x_y_arrays,
-                     balanced_tree=False,# with the default it's slower
+                     balanced_tree=False,  # with the default it's slower
                      compact_nodes=False)
     dist, indexes = mytree.query(points)
     return indexes
@@ -196,7 +194,7 @@ def extract_rain_rate_from_radar(lon_bike, lat_bike, dtime_bike, time_radar,
     # using the list of lat and lon from the track of the bike
     inds_latlon_radar = do_kdtree(combined_x_y_arrays, points_list)
     # Now find the radar forecast step closest to the dtime for the bike
-    inds_dtime_radar = np.abs(np.subtract.outer(dtime_radar.values, 
+    inds_dtime_radar = np.abs(np.subtract.outer(dtime_radar.values,
                                                 dtime_bike.values)).argmin(0)
     # Then finally loop and extract rain rate
     rain_bike = np.empty(shape=(len(shifts),
@@ -214,7 +212,7 @@ def extract_rain_rate_from_radar(lon_bike, lat_bike, dtime_bike, time_radar,
     id_radar_data = inds_latlon_radar + inds_dtime_radar
     shifted = np.append(id_radar_data[1:], -1)
     # (id_radar_data != shifted) allows us to select the first
-    # element of a duplicates sequence 
+    # element of a duplicates sequence
     rain_bike = rain_bike[:, id_radar_data != shifted]
     dtime_bike = dtime_bike[id_radar_data != shifted]
     # Convert from reflectivity to rain rate
@@ -247,9 +245,11 @@ def convert_to_dataframe(rain_bike, dtime_bike, time_radar):
     df = pd.DataFrame(data=rain_bike.T, index=dtime_bike,
                       columns=time_radar[np.array(shifts)])
     # Scale data to mm/h by correctly using the time elapsed between two trajectory points
-    df['difference_hours'] = np.insert((np.diff(df.index.seconds) / 3600.), 0, 0)
+    df['difference_hours'] = np.insert(
+        (np.diff(df.index.seconds) / 3600.), 0, 0)
     df.loc[:, df.columns[df.columns != 'difference_hours']] = \
-        df.loc[:, df.columns[df.columns != 'difference_hours']].multiply(df["difference_hours"], axis="index")
+        df.loc[:, df.columns[df.columns != 'difference_hours']
+               ].multiply(df["difference_hours"], axis="index")
     df = df.drop(columns='difference_hours')
 
     return df
@@ -259,8 +259,10 @@ def create_dummy_dataframe():
     """
     Create a dummy dataframe useful for testing the app and the plot.
     """
-    columns = pd.date_range(start='2019-01-01 12:00', periods=len(shifts), freq='15min')
-    dtime_bike = pd.timedelta_range(start='00:00:00', end='00:25:00', freq='0.5min')
+    columns = pd.date_range(start='2019-01-01 12:00',
+                            periods=len(shifts), freq='15min')
+    dtime_bike = pd.timedelta_range(
+        start='00:00:00', end='00:25:00', freq='0.5min')
     rain_bike = np.empty(shape=(len(dtime_bike), len(columns)))
 
     for i, column in enumerate(rain_bike.T):
@@ -279,13 +281,13 @@ def linear_random_increase(x):
 
 
 def zoom_center(lons: tuple = None, lats: tuple = None, lonlats: tuple = None,
-        format: str = 'lonlat', projection: str = 'mercator',
-        width_to_height: float = 2.0) -> (float, dict):
+                format: str = 'lonlat', projection: str = 'mercator',
+                width_to_height: float = 2.0) -> (float, dict):
     """Finds optimal zoom and centering for a plotly mapbox.
     Must be passed (lons & lats) or lonlats.
     Temporary solution awaiting official implementation, see:
     https://github.com/plotly/plotly.js/issues/3434
-    
+
     Parameters
     --------
     lons: tuple, optional, longitude component of each location
@@ -297,7 +299,7 @@ def zoom_center(lons: tuple = None, lats: tuple = None, lonlats: tuple = None,
         raises `NotImplementedError` if other is passed
     width_to_height: float, expected ratio of final graph's with to height,
         used to select the constrained axis.
-    
+
     Returns
     --------
     zoom: float, from 1 to 20
@@ -306,7 +308,7 @@ def zoom_center(lons: tuple = None, lats: tuple = None, lonlats: tuple = None,
     >>> print(zoom_center((-109.031387, -103.385460),
     ...     (25.587101, 31.784620)))
     (5.75, {'lon': -106.208423, 'lat': 28.685861})
-    
+
     See https://stackoverflow.com/questions/63787612/plotly-automatic-zooming-for-mapbox-maps
     """
     if lons is None and lats is None:
@@ -336,7 +338,7 @@ def zoom_center(lons: tuple = None, lats: tuple = None, lonlats: tuple = None,
         margin = 1.2
         height = (maxlat - minlat) * margin * width_to_height
         width = (maxlon - minlon) * margin
-        lon_zoom = np.interp(width , lon_zoom_range, range(20, 0, -1))
+        lon_zoom = np.interp(width, lon_zoom_range, range(20, 0, -1))
         lat_zoom = np.interp(height, lon_zoom_range, range(20, 0, -1))
         zoom = round(min(lon_zoom, lat_zoom), 2)
     else:
@@ -345,6 +347,7 @@ def zoom_center(lons: tuple = None, lats: tuple = None, lonlats: tuple = None,
         )
 
     return zoom, center
+
 
 def generate_map_plot(df):
     if df is not None:
@@ -357,22 +360,26 @@ def generate_map_plot(df):
                                    width_to_height=8)
 
         fig = [dl.Map([
-                dl.TileLayer(url=mapURL, attribution=attribution, tileSize=512, zoomOffset=-1),
-                dl.LayerGroup(id="layer"),
-                dl.WMSTileLayer(url="https://maps.dwd.de/geoserver/ows?",
-                                layers="dwd:RX-Produkt", 
-                                format="image/png", 
+            dl.TileLayer(url=mapURL, attribution=attribution,
+                         tileSize=512, zoomOffset=-1),
+            dl.LayerGroup(id="layer"),
+            dl.WMSTileLayer(url="https://maps.dwd.de/geoserver/ows?",
+                                layers="dwd:RX-Produkt",
+                                format="image/png",
                                 transparent=True, opacity=0.7),
-                dl.LocateControl(options={'locateOptions': {'enableHighAccuracy': True}}),
-                dl.Polyline(positions=trajectory),
-                dl.Marker(position=trajectory[0], children=dl.Tooltip(start_point)),
-                dl.Marker(position=trajectory[-1], children=dl.Tooltip(end_point))
-                    ],
-               center=[center['lat'], center['lon']],
-               zoom=zoom,
-               style={'width': '100%', 'height': '45vh', 'margin': "auto", "display": "block"},
-               id='map')]
-    else:# make an empty map
+            dl.LocateControl(options={'locateOptions': {
+                             'enableHighAccuracy': True}}),
+            dl.Polyline(positions=trajectory),
+            dl.Marker(position=trajectory[0],
+                      children=dl.Tooltip(start_point)),
+            dl.Marker(position=trajectory[-1], children=dl.Tooltip(end_point))
+        ],
+            center=[center['lat'], center['lon']],
+            zoom=zoom,
+            style={'width': '100%', 'height': '45vh',
+                   'margin': "auto", "display": "block"},
+            id='map')]
+    else:  # make an empty map
         fig = make_empty_map()
 
     return fig
@@ -380,24 +387,24 @@ def generate_map_plot(df):
 
 def make_fig_time(df):
     if df is not None:
-        df = df.rename(columns=lambda s: s.strftime('%H:%M'), 
-                  index=lambda s: (s.seconds/60))
+        df = df.rename(columns=lambda s: s.strftime('%H:%M'),
+                       index=lambda s: (s.seconds/60))
 
         fig = px.line(df,
-                     color_discrete_sequence=px.colors.qualitative.Pastel)
+                      color_discrete_sequence=px.colors.qualitative.Pastel)
 
         fig.update_layout(
             legend_orientation="h",
             xaxis=dict(title='Time from departure [min]',
-                rangemode = 'tozero'),
+                       rangemode='tozero'),
             yaxis=dict(title='Precipitation [mm/h]',
-                        rangemode = 'tozero'),
+                       rangemode='tozero'),
             legend=dict(
-                  title=dict(text='leave at '),
-                  font=dict(size=10)),
-                  height=390,
-                  margin={"r": 0.1, "t": 0.1, "l": 0.1, "b": 0.1},
-                  template='plotly_white',
+                title=dict(text='leave at '),
+                font=dict(size=10)),
+            height=390,
+            margin={"r": 0.1, "t": 0.1, "l": 0.1, "b": 0.1},
+            template='plotly_white',
         )
     else:
         fig = make_empty_figure()
@@ -410,7 +417,8 @@ def make_fig_bars(df):
         df = df.rename(columns=lambda s: s.strftime('%H:%M')).sum()
         values = df.values
         labels = ['%.1g mm' % value for value in values]
-        colors = ['peachpuff' if x == values.min() else 'lightsteelblue' for x in values]
+        colors = ['peachpuff' if x == values.min(
+        ) else 'lightsteelblue' for x in values]
 
         fig = go.Figure(data=[go.Bar(
             x=df.index, y=values,
@@ -421,13 +429,13 @@ def make_fig_bars(df):
         )])
 
         fig.update_layout(
-                          legend_orientation="h",
-                          xaxis=dict(title='Leave at..'),
-                          yaxis=dict(visible=False),
-                          showlegend=False,
-                          height=390,
-                          margin={"r": 0.1, "t": 0.1, "l": 0.1, "b": 0.1},
-                          template='plotly_white',
+            legend_orientation="h",
+            xaxis=dict(title='Leave at..'),
+            yaxis=dict(visible=False),
+            showlegend=False,
+            height=390,
+            margin={"r": 0.1, "t": 0.1, "l": 0.1, "b": 0.1},
+            template='plotly_white',
         )
 
     return fig
@@ -443,8 +451,8 @@ def make_empty_figure(text="No data (yet 😃)"):
                        font=dict(size=30))
 
     fig.update_layout(
-            xaxis=dict(visible=False),
-            yaxis=dict(visible=False)
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False)
     )
 
     fig.update_layout(
@@ -458,18 +466,21 @@ def make_empty_figure(text="No data (yet 😃)"):
 
 def make_empty_map(lat_center=51.326863, lon_center=10.354922, zoom=5):
     fig = [dl.Map([
-                dl.TileLayer(url=mapURL, attribution=attribution, tileSize=512, zoomOffset=-1),
-                dl.LayerGroup(id="layer"),
-                dl.WMSTileLayer(url="https://maps.dwd.de/geoserver/ows?",
-                                                layers="dwd:RX-Produkt", 
-                                                format="image/png", 
-                                                transparent=True, opacity=0.7,
-                                                version='1.3.0',
-                                                detectRetina=True),
-                dl.LocateControl(options={'locateOptions': {'enableHighAccuracy': True}}),
-                    ],
-               center=[lat_center, lon_center], zoom=zoom,
-               style={'width': '100%', 'height': '45vh', 'margin': "auto", "display": "block"},
-               id='map')]
+        dl.TileLayer(url=mapURL, attribution=attribution,
+                     tileSize=512, zoomOffset=-1),
+        dl.LayerGroup(id="layer"),
+        dl.WMSTileLayer(url="https://maps.dwd.de/geoserver/ows?",
+                        layers="dwd:RX-Produkt",
+                        format="image/png",
+                        transparent=True, opacity=0.7,
+                        version='1.3.0',
+                        detectRetina=True),
+        dl.LocateControl(options={'locateOptions': {
+                         'enableHighAccuracy': True}}),
+    ],
+        center=[lat_center, lon_center], zoom=zoom,
+        style={'width': '100%', 'height': '45vh',
+               'margin': "auto", "display": "block"},
+        id='map')]
 
     return fig
