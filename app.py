@@ -1,7 +1,7 @@
 import dash
 import dash_bootstrap_components as dbc
-import dash_core_components as dcc
-import dash_html_components as html
+from dash import dcc
+from dash import html
 import utils
 from dash.dependencies import Input, Output, State
 import json
@@ -32,7 +32,7 @@ controls = dbc.Card(
     [
         dbc.InputGroup(
             [
-                dbc.InputGroupAddon("from", addon_type="prepend"),
+                dbc.InputGroupText("from"),
                 dbc.Input(placeholder="type address or get current location on map", id='from_address', 
                           type='text', autoComplete=True),
             ],
@@ -40,7 +40,7 @@ controls = dbc.Card(
         ),
         dbc.InputGroup(
             [
-                dbc.InputGroupAddon("to", addon_type="prepend"),
+                dbc.InputGroupText("to"),
                 dbc.Input(placeholder="type address or click on map", id='to_address',
                           type='text', autoComplete=True),
             ],
@@ -48,7 +48,7 @@ controls = dbc.Card(
         ),
         dbc.InputGroup(
             [
-                dbc.InputGroupAddon("how", addon_type="prepend"),
+                dbc.InputGroupText("how"),
                 dbc.Select(
                     id="transport_mode",
                     value="cycling",
