@@ -452,10 +452,7 @@ def make_empty_figure(text="No data (yet 😃)"):
 
     fig.update_layout(
         xaxis=dict(visible=False),
-        yaxis=dict(visible=False)
-    )
-
-    fig.update_layout(
+        yaxis=dict(visible=False),
         height=390,
         margin={"r": 0.1, "t": 0.1, "l": 0.1, "b": 0.1},
         template='plotly_white',
@@ -481,6 +478,9 @@ def make_empty_map(lat_center=51.326863, lon_center=10.354922, zoom=5):
         center=[lat_center, lon_center], zoom=zoom,
         style={'width': '100%', 'height': '45vh',
                'margin': "auto", "display": "block"},
+        touchZoom=False,
+        dragging=False,
+        scrollWheelZoom=False,
         id='map')]
 
     return fig

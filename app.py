@@ -34,7 +34,7 @@ controls = dbc.Card(
             [
                 dbc.InputGroupText("from"),
                 dbc.Input(placeholder="type address or get current location on map", id='from_address', 
-                          type='text', autocomplete=True),
+                          type='text', autocomplete="street-address"),
             ],
             className="mb-2",
         ),
@@ -42,7 +42,7 @@ controls = dbc.Card(
             [
                 dbc.InputGroupText("to"),
                 dbc.Input(placeholder="type address or click on map", id='to_address',
-                          type='text', autocomplete=True),
+                          type='text', autocomplete="street-address"),
             ],
             className="mb-2",
         ),
@@ -82,7 +82,7 @@ fig_card = dbc.Card(
             id="switches-input",
             switch=True,
         ),
-        dcc.Graph(id='time-plot')
+        dcc.Graph(id='time-plot', config={'staticPlot': True})
     ],
     className="mb-2"
 )
