@@ -34,7 +34,7 @@ controls = dbc.Card(
             [
                 dbc.InputGroupText("from"),
                 dbc.Input(placeholder="type address or get current location on map", id='from_address', 
-                          type='text', autoComplete=True),
+                          type='text', autocomplete=True),
             ],
             className="mb-2",
         ),
@@ -42,7 +42,7 @@ controls = dbc.Card(
             [
                 dbc.InputGroupText("to"),
                 dbc.Input(placeholder="type address or click on map", id='to_address',
-                          type='text', autoComplete=True),
+                          type='text', autocomplete=True),
             ],
             className="mb-2",
         ),

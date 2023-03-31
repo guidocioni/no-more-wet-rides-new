@@ -126,7 +126,7 @@ def download_extract_url(url, data_path='/tmp/'):
 
 
 def get_radar_data(data_path='/tmp/',
-                   base_radar_url="https://opendata.dwd.de/weather/radar/composit/wn/"):
+                   base_radar_url="https://opendata.dwd.de/weather/radar/composite/wn/"):
     # Get a list of the files to be downloaded
     files = 'WN_LATEST.tar.bz2'
 
