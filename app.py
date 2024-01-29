@@ -34,7 +34,7 @@ controls = dbc.Card(
             [
                 dbc.InputGroupText("from"),
                 dbc.Input(placeholder="type address or get current location on map", id='from_address', 
-                          type='text', autocomplete="street-address"),
+                          type='text', autocomplete="street-address", persistence=True),
             ],
             className="mb-2",
         ),
@@ -42,7 +42,7 @@ controls = dbc.Card(
             [
                 dbc.InputGroupText("to"),
                 dbc.Input(placeholder="type address or click on map", id='to_address',
-                          type='text', autocomplete="street-address"),
+                          type='text', autocomplete="street-address", persistence=True),
             ],
             className="mb-2",
         ),
@@ -253,12 +253,14 @@ def update_location(location):
 @app.callback(
     [Output("layer", "children"),
      Output("to_address", "value")],
-    [Input("map", "click_lat_lng")],
+    [Input("map", "clickData")],
     prevent_initial_call=True)
-def map_click(click_lat_lng):
-    if click_lat_lng is not None:
-        address = utils.get_place_address_reverse(click_lat_lng[1], click_lat_lng[0])
-        return [dl.Marker(position=click_lat_lng, children=dl.Tooltip(address))], address
+def map_click(clickData):
+    if clickData is not None:
+        lat = clickData['latlng']['lat']
+        lon = clickData['latlng']['lng']
+        address = utils.get_place_address_reverse(lon, lat)
+        return [dl.Marker(position=[lat, lon], children=dl.Tooltip(address))], address
     else:
         raise dash.exceptions.PreventUpdate
 
