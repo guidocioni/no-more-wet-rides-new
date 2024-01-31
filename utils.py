@@ -367,7 +367,6 @@ def generate_map_plot(df):
                                 layers="dwd:RX-Produkt",
                                 format="image/png",
                                 transparent=True, opacity=0.7),
-            dl.LocateControl(locateOptions={'enableHighAccuracy': True}),
             dl.Polyline(positions=trajectory),
             dl.Marker(position=trajectory[0],
                       children=dl.Tooltip(start_point)),
@@ -471,14 +470,13 @@ def make_empty_map(lat_center=51.326863, lon_center=10.354922, zoom=5):
                         transparent=True, opacity=0.7,
                         version='1.3.0',
                         detectRetina=True),
-        dl.LocateControl(locateOptions={'enableHighAccuracy': True}),
     ],
         center=[lat_center, lon_center], zoom=zoom,
         style={'width': '100%', 'height': '45vh',
                'margin': "auto", "display": "block"},
-        touchZoom=False,
-        dragging=False,
-        scrollWheelZoom=False,
+        # touchZoom=False,
+        # dragging=False,
+        # scrollWheelZoom=False,
         id='map')]
 
     return fig

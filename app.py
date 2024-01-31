@@ -1,14 +1,13 @@
 import dash
 import dash_bootstrap_components as dbc
-from dash import dcc
-from dash import html
+from dash import dcc, html, Input, Output, State
 import utils
-from dash.dependencies import Input, Output, State
 import json
 import pandas as pd
 from flask_caching import Cache
 from flask import request
-import platform, multiprocessing
+import platform
+import multiprocessing
 import dash_leaflet as dl
 
 
@@ -17,24 +16,29 @@ if platform.system() == "Darwin":
 
 
 app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP,
-            'https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css'],
+                                      dbc.icons.FONT_AWESOME],
                 url_base_pathname='/nmwr/',
-                meta_tags=[{'name': 'viewport', 
+                suppress_callback_exceptions=True,
+                meta_tags=[{'name': 'viewport',
                             'content': 'width=device-width, initial-scale=1'}])
 
 server = app.server
 
-cache = Cache(server, config={'CACHE_TYPE': 'filesystem', 
+cache = Cache(server, config={'CACHE_TYPE': 'filesystem',
                               'CACHE_DIR': '/tmp'})
 
 
 controls = dbc.Card(
     [
         dbc.InputGroup(
-            [
+            [   
+                dcc.Geolocation(id="geolocation"),
                 dbc.InputGroupText("from"),
-                dbc.Input(placeholder="type address or get current location on map", id='from_address', 
+                dbc.Input(placeholder="type address or geolocate", id='from_address',
                           type='text', autocomplete="street-address", persistence=True),
+                dbc.Button(id='geolocate',
+                           className="fa-solid fa-location-dot col-2",
+                           color="secondary", outline=False)
             ],
             className="mb-2",
         ),
@@ -69,7 +73,7 @@ map_card = dbc.Card(
     [
         html.Div(id='map-div')
     ],
-   className="mb-2"
+    className="mb-2"
 )
 
 fig_card = dbc.Card(
@@ -88,35 +92,36 @@ fig_card = dbc.Card(
 )
 
 
-help_card =  dbc.Card (  [
-        dbc.CardBody(
-            [
-                html.H4("Help", className="card-title"),
-                html.P(
-                    ["Enter the start and end point of your journey and press on generate. "
-                    "After a few seconds the graph will show precipitation forecast on your journey for different start times. You can then decide when to leave. "
-                    "For details see ", html.A('here', href='https://github.com/guidocioni/no-more-wet-rides-new')],
-                    className="card-text",
-                ),
-            ]
-        ),
-    ],className="mb-1" )
+help_card = dbc.Card([
+    dbc.CardBody(
+        [
+            html.H4("Help", className="card-title"),
+            html.P(
+                ["Enter the start and end point of your journey and press on generate. "
+                 "After a few seconds the graph will show precipitation forecast on your journey for different start times. You can then decide when to leave. "
+                 "For details see ", html.A('here', href='https://github.com/guidocioni/no-more-wet-rides-new')],
+                className="card-text",
+            ),
+        ]
+    ),
+], className="mb-1")
 
 
 app.layout = dbc.Container(
     [
         html.H1("No more wet rides!"),
-        html.H6('A simple webapp to save your bike rides from the crappy german weather'),
+        html.H6(
+            'A simple webapp to save your bike rides from the crappy german weather'),
         html.Hr(),
-        dbc.Alert("Since the radar only covers Germany and neighbouring countries the app will fail if you enter an address outside of this area", 
-            color="warning",
-            dismissable=True,
-            duration=5000),
+        dbc.Alert("Since the radar only covers Germany and neighbouring countries the app will fail if you enter an address outside of this area",
+                  color="warning",
+                  dismissable=True,
+                  duration=5000),
         dbc.Alert("Your ride duration exceeds the radar forecast horizon. Results will only be partial! Click on \"more details\" in the plot to show the used data.",
-            dismissable=True,
-            color="warning",
-            is_open=False,
-            id='long-ride-alert'),
+                  dismissable=True,
+                  color="warning",
+                  is_open=False,
+                  id='long-ride-alert'),
         dbc.Row(
             [
                 dbc.Col([
@@ -133,18 +138,29 @@ app.layout = dbc.Container(
                         ], sm=12, md=12, lg=4, align='center'),
                 dbc.Col(
                     [
-                    dbc.Spinner(fig_card),
-                    help_card
+                        dbc.Spinner(fig_card),
+                        help_card
                     ],
-                 sm=12, md=12, lg=7, align='center'),
+                    sm=12, md=12, lg=7, align='center'),
             ], justify="center",
         ),
 
-    html.Div(id='intermediate-value', style={'display': 'none'}),
-    html.Div(id='radar-data-2', style={'display': 'none'})
+        html.Div(id='intermediate-value', style={'display': 'none'}),
+        html.Div(id='radar-data-2', style={'display': 'none'})
     ],
     fluid=True,
 )
+
+
+@app.callback(
+    Output("geolocation", "update_now"),
+    Input("geolocate", "n_clicks"),
+)
+def update_now(click):
+    if not click:
+        raise dash.exceptions.PreventUpdate
+    else:
+        return True
 
 
 @app.callback(
@@ -162,7 +178,8 @@ def create_coords_and_map(n_clicks, from_address, to_address, mode):
         return utils.generate_map_plot(df=None), y
     else:
         if from_address is not None and to_address is not None:
-            source, dest, lons, lats, dtime = get_directions(from_address, to_address, mode)
+            source, dest, lons, lats, dtime = get_directions(
+                from_address, to_address, mode)
             df = pd.DataFrame({'lons': lons,
                                'lats': lats,
                                # to avoid problems with json
@@ -186,10 +203,10 @@ def func(data, switch):
     if data is not None:
         df = pd.read_json(data, orient='split')
         if not df.empty:
-            # convert dtime to timedelta to avoid problems 
+            # convert dtime to timedelta to avoid problems
             df['dtime'] = pd.to_timedelta(df['dtime'], unit='s')
             out = get_data(df.lons, df.lats, df.dtime)
-            # Check if there is no rain at all beargfore plotting 
+            # Check if there is no rain at all beargfore plotting
             if (out.sum() < 0.01).all():
                 return utils.make_empty_figure('🎉 Yey, no rain forecast on your ride 🎉')
             else:
@@ -240,12 +257,14 @@ def get_radar_data_cached():
 
 
 @app.callback(
-    Output("from_address", "value"), 
-    [Input("map", "location_lat_lon_acc")],
+    Output("from_address", "value"),
+    [Input("geolocation", "local_date"),  # need it just to force an update!
+     Input("geolocation", "position")],
+     State("geolocate", "n_clicks"),
     prevent_initial_call=True)
-def update_location(location):
-    if location is not None:
-        return utils.get_place_address_reverse(location[1], location[0])
+def update_location(_, pos, n_clicks):
+    if pos and n_clicks:
+        return utils.get_place_address_reverse(pos['lon'], pos['lat'])
     else:
         raise dash.exceptions.PreventUpdate
 
@@ -294,7 +313,8 @@ def fire_get_radar_data(from_address):
 
 @cache.memoize(300)
 def get_data(lons, lats, dtime):
-    lon_radar, lat_radar, time_radar, dtime_radar, rr = filter_radar_cached(lons, lats)
+    lon_radar, lat_radar, time_radar, dtime_radar, rr = filter_radar_cached(
+        lons, lats)
 
     df = utils.extract_rain_rate_from_radar(lon_bike=lons, lat_bike=lats,
                                             dtime_bike=dtime,
@@ -315,10 +335,12 @@ def query():
 
     if from_address and to_address:
         if mode:
-            source, dest, lons, lats, dtime = get_directions(from_address, to_address, mode)
+            source, dest, lons, lats, dtime = get_directions(
+                from_address, to_address, mode)
         else:
-            source, dest, lons, lats, dtime =  get_directions(from_address, to_address, mode='cycling')
-        # compute the data from radar, the result is cached 
+            source, dest, lons, lats, dtime = get_directions(
+                from_address, to_address, mode='cycling')
+        # compute the data from radar, the result is cached
         out = get_data(lons, lats, dtime)
         out['source'] = source
         out['destination'] = dest
