@@ -195,6 +195,24 @@ def create_coords_and_map(n_clicks, from_address, to_address, mode):
 
 
 @app.callback(
+    Output("map", "viewport"),
+    Input("intermediate-value", "children"),
+    prevent_intial_call=True
+)
+def map_flyto(data):
+    if data is not None:
+        df = pd.read_json(data, orient='split')
+        if not df.empty:
+            zoom, center = utils.zoom_center(df.lons.values,
+                                             df.lats.values,
+                                             width_to_height=0.5)
+
+            return dict(center=[center['lat'], center['lon']],
+                        zoom=zoom)
+    raise dash.exceptions.PreventUpdate
+
+
+@app.callback(
     Output("time-plot", "figure"),
     [Input("intermediate-value", "children"),
      Input("switches-input", "value")]
