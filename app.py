@@ -48,6 +48,9 @@ controls = dbc.Card(
                 dbc.InputGroupText("to"),
                 dbc.Input(placeholder="type address or click on map", id='to_address',
                           type='text', autocomplete="street-address", persistence=True),
+                dbc.Button(id='exchange',
+                           className="fa-solid fa-exchange col-2",
+                           color="secondary", outline=False)
             ],
             className="mb-2",
         ),
@@ -159,6 +162,21 @@ app.layout = dbc.Container(
     ],
     fluid=True,
 )
+
+# Shift to and from address
+@app.callback(
+    [Output("from_address", "value", allow_duplicate=True),
+     Output("to_address", "value", allow_duplicate=True)],
+    Input("exchange", "n_clicks"),
+    [State("from_address", "value"),
+     State("to_address", "value")],
+    prevent_initial_call=True,
+)
+def switch_addresses(click, from_address, to_address):
+    if not click:
+        raise dash.exceptions.PreventUpdate
+    else:
+        return to_address, from_address
 
 
 @app.callback(
@@ -321,7 +339,8 @@ def filter_radar_cached(lon_bike, lat_bike):
 
 @app.callback(
     Output("garbage", "data"),
-    [Input("from_address", "value")], prevent_initial_call=True
+    [Input("from_address", "value")],
+    prevent_initial_call=True
 )
 def fire_get_radar_data(from_address):
     if from_address is not None:
