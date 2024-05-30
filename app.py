@@ -1,6 +1,6 @@
 import dash
 import dash_bootstrap_components as dbc
-from dash import dcc, html, Input, Output, State
+from dash import dcc, html, Input, Output, State, clientside_callback
 import utils
 import io
 import pandas as pd
@@ -9,13 +9,14 @@ from flask import request
 import platform
 import multiprocessing
 import dash_leaflet as dl
+import dash_mantine_components as dmc
 
 
 if platform.system() == "Darwin":
     multiprocessing.set_start_method('forkserver')
 
 
-app = dash.Dash(external_stylesheets=[dbc.themes.BOOTSTRAP,
+app = dash.Dash(external_stylesheets=[dbc.themes.FLATLY,
                                       dbc.icons.FONT_AWESOME],
                 url_base_pathname='/nmwr/',
                 suppress_callback_exceptions=True,
@@ -31,7 +32,7 @@ cache = Cache(server, config={'CACHE_TYPE': 'filesystem',
 controls = dbc.Card(
     [
         dbc.InputGroup(
-            [   
+            [
                 dcc.Geolocation(id="geolocation"),
                 dbc.InputGroupText("from"),
                 dbc.Input(placeholder="type address or geolocate", id='from_address',
@@ -144,9 +145,17 @@ app.layout = dbc.Container(
                     sm=12, md=12, lg=7, align='center'),
             ], justify="center",
         ),
-
+        dcc.Link(
+            dmc.Affix(dbc.Button(class_name='fa-solid fa-circle-chevron-up fa-3x',
+                                 outline=True,
+                                 id='back-to-top-button',
+                                    style={'display': 'none'}),
+                      position={"bottom": 10, "right": 10},
+                      ),
+            href="#from_address"
+        ),
         dcc.Store(id='intermediate-value', data={}),
-        html.Div(id='radar-data-2', style={'display': 'none'})
+        dcc.Store(id='garbage')
     ],
     fluid=True,
 )
@@ -274,7 +283,7 @@ def get_radar_data_cached():
     Output("from_address", "value"),
     [Input("geolocation", "local_date"),  # need it just to force an update!
      Input("geolocation", "position")],
-     State("geolocate", "n_clicks"),
+    State("geolocate", "n_clicks"),
     prevent_initial_call=True)
 def update_location(_, pos, n_clicks):
     if pos and n_clicks:
@@ -311,7 +320,7 @@ def filter_radar_cached(lon_bike, lat_bike):
 
 
 @app.callback(
-    Output("radar-data-2", "children"),
+    Output("garbage", "data"),
     [Input("from_address", "value")], prevent_initial_call=True
 )
 def fire_get_radar_data(from_address):
@@ -361,6 +370,25 @@ def query():
         return out.to_json(orient='split', date_format='iso')
     else:
         return None
+
+
+clientside_callback(
+    """function (id) {
+        var myID = document.getElementById(id)
+        var myScrollFunc = function() {
+          var y = window.scrollY;
+          if (y >= 200) {
+            myID.style.display = ""
+          } else {
+            myID.style.display = "none"
+          }
+        };
+        window.addEventListener("scroll", myScrollFunc);
+        return window.dash_clientside.no_update
+    }""",
+    Output('back-to-top-button', 'id'),
+    Input('back-to-top-button', 'id')
+)
 
 
 if __name__ == "__main__":
