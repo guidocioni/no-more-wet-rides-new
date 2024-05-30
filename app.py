@@ -90,7 +90,7 @@ fig_card = dbc.Card(
             id="switches-input",
             switch=True,
         ),
-        dcc.Graph(id='time-plot', config={'staticPlot': True})
+        dcc.Graph(id='time-plot')
     ],
     className="mb-2"
 )
@@ -391,6 +391,7 @@ def query():
         return None
 
 
+# Scroll back to top
 clientside_callback(
     """function (id) {
         var myID = document.getElementById(id)
@@ -407,6 +408,25 @@ clientside_callback(
     }""",
     Output('back-to-top-button', 'id'),
     Input('back-to-top-button', 'id')
+)
+
+
+# Scroll to the plot
+clientside_callback(
+    """
+    function(n_clicks, element_id) {
+        console.log('Scrolling to element')
+            var targetElement = document.getElementById(element_id);
+            if (targetElement) {
+                targetElement.scrollIntoView({ behavior: 'smooth' });
+            }
+        return null;
+    }
+    """,
+    Output('garbage', 'data', allow_duplicate=True),
+    Input('time-plot', 'figure'),
+    [State('time-plot', 'id')],
+    prevent_initial_call=True
 )
 
 
