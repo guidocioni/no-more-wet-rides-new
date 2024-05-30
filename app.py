@@ -2,7 +2,7 @@ import dash
 import dash_bootstrap_components as dbc
 from dash import dcc, html, Input, Output, State
 import utils
-import json
+import io
 import pandas as pd
 from flask_caching import Cache
 from flask import request
@@ -145,7 +145,7 @@ app.layout = dbc.Container(
             ], justify="center",
         ),
 
-        html.Div(id='intermediate-value', style={'display': 'none'}),
+        dcc.Store(id='intermediate-value', data={}),
         html.Div(id='radar-data-2', style={'display': 'none'})
     ],
     fluid=True,
@@ -165,7 +165,7 @@ def update_now(click):
 
 @app.callback(
     [Output("map-div", "children"),
-     Output('intermediate-value', 'children')],
+     Output('intermediate-value', 'data')],
     [Input("generate-button", "n_clicks")],
     [State("from_address", "value"),
      State("to_address", "value"),
@@ -173,9 +173,7 @@ def update_now(click):
 )
 def create_coords_and_map(n_clicks, from_address, to_address, mode):
     if n_clicks is None:
-        coords = {}
-        y = json.dumps(coords)
-        return utils.generate_map_plot(df=None), y
+        return utils.generate_map_plot(df=None), {}
     else:
         if from_address is not None and to_address is not None:
             source, dest, lons, lats, dtime = get_directions(
@@ -189,19 +187,17 @@ def create_coords_and_map(n_clicks, from_address, to_address, mode):
             fig = utils.generate_map_plot(df)
             return fig, df.to_json(date_format='iso', orient='split')
         else:
-            coords = {}
-            y = json.dumps(coords)
-            return utils.generate_map_plot(df=None), y
+            return utils.generate_map_plot(df=None), {}
 
 
 @app.callback(
     Output("map", "viewport"),
-    Input("intermediate-value", "children"),
+    Input("intermediate-value", "data"),
     prevent_intial_call=True
 )
 def map_flyto(data):
-    if data is not None:
-        df = pd.read_json(data, orient='split')
+    if len(data) > 0:
+        df = pd.read_json(io.StringIO(data), orient='split')
         if not df.empty:
             zoom, center = utils.zoom_center(df.lons.values,
                                              df.lats.values,
@@ -214,12 +210,12 @@ def map_flyto(data):
 
 @app.callback(
     Output("time-plot", "figure"),
-    [Input("intermediate-value", "children"),
+    [Input("intermediate-value", "data"),
      Input("switches-input", "value")]
 )
 def func(data, switch):
-    if data is not None:
-        df = pd.read_json(data, orient='split')
+    if len(data) > 0:
+        df = pd.read_json(io.StringIO(data), orient='split')
         if not df.empty:
             # convert dtime to timedelta to avoid problems
             df['dtime'] = pd.to_timedelta(df['dtime'], unit='s')
@@ -240,12 +236,12 @@ def func(data, switch):
 
 @app.callback(
     Output("long-ride-alert", "is_open"),
-    [Input("intermediate-value", "children")],
+    [Input("intermediate-value", "data")],
     prevent_initial_call=True
 )
 def show_long_ride_warning(data):
-    if data is not None:
-        df = pd.read_json(data, orient='split')
+    if len(data) > 0:
+        df = pd.read_json(io.StringIO(data), orient='split')
         if not df.empty:
             df['dtime'] = pd.to_timedelta(df['dtime'], unit='s')
             if (df['dtime'] + pd.to_timedelta('%smin' % utils.shifts[-1]*5) > pd.to_timedelta('120min')).any():
