@@ -10,7 +10,7 @@ import bz2
 import plotly.graph_objs as go
 import plotly.express as px
 from multiprocessing import Pool, cpu_count
-from scipy.spatial import cKDTree
+from sklearn.neighbors import BallTree
 import dash_leaflet as dl
 import tarfile
 
@@ -170,14 +170,6 @@ def process_radar_data(fnames):
     return lon_radar, lat_radar, time_radar, dtime_radar, rr
 
 
-def do_kdtree(combined_x_y_arrays, points):
-    mytree = cKDTree(combined_x_y_arrays,
-                     balanced_tree=False,  # with the default it's slower
-                     compact_nodes=False)
-    dist, indexes = mytree.query(points)
-    return indexes
-
-
 def extract_rain_rate_from_radar(lon_bike, lat_bike, dtime_bike, time_radar,
                                  lon_radar, lat_radar, dtime_radar, rr):
     """
@@ -187,12 +179,12 @@ def extract_rain_rate_from_radar(lon_bike, lat_bike, dtime_bike, time_radar,
 
     Returns a dataframe with the rain rate prediction
     """
-    combined_x_y_arrays = np.dstack([lon_radar,
-                                     lat_radar])[0]
-    points_list = np.vstack([lon_bike, lat_bike]).T
-    # Construct a k-d Tree with the coordinate from the radar and look for nearest neighbours
+    # Construct a BallTree with the coordinate from the radar and look for nearest neighbours
     # using the list of lat and lon from the track of the bike
-    inds_latlon_radar = do_kdtree(combined_x_y_arrays, points_list)
+    mytree = BallTree(np.deg2rad(np.dstack([lat_radar, lon_radar])[0]),
+                      metric='haversine')
+    inds_latlon_radar = mytree.query(np.deg2rad(np.vstack([lat_bike, lon_bike]).T),
+                                     return_distance=False).ravel()
     # Now find the radar forecast step closest to the dtime for the bike
     inds_dtime_radar = np.abs(np.subtract.outer(dtime_radar.values,
                                                 dtime_bike.values)).argmin(0)
@@ -467,7 +459,8 @@ def make_empty_map(lat_center=51.326863, lon_center=10.354922, zoom=5):
         dl.WMSTileLayer(url="https://maps.dwd.de/geoserver/ows?",
                         layers="dwd:RX-Produkt",
                         format="image/png",
-                        transparent=True, opacity=0.7,
+                        transparent=True,
+                        opacity=0.7,
                         version='1.3.0',
                         detectRetina=True),
     ],
@@ -477,7 +470,7 @@ def make_empty_map(lat_center=51.326863, lon_center=10.354922, zoom=5):
                'margin': "auto", "display": "block"},
         # touchZoom=False,
         # dragging=False,
-        # scrollWheelZoom=False,
+        scrollWheelZoom=False,
         id='map')]
 
     return fig
