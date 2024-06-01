@@ -9,21 +9,10 @@ import json
 import bz2
 import plotly.graph_objs as go
 import plotly.express as px
-from multiprocessing import Pool, cpu_count
 from sklearn.neighbors import BallTree
+from settings import apiURL, mapURL, attribution, shifts, apiKey
 import dash_leaflet as dl
 import tarfile
-
-
-apiURL = "https://api.mapbox.com/directions/v5/mapbox"
-apiKey = os.environ['MAPBOX_KEY']
-
-# mapURL = 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png'
-mapURL = 'https://api.mapbox.com/styles/v1/mapbox/dark-v10/tiles/{z}/{x}/{y}{r}?access_token=' + apiKey
-attribution = '© <a href="https://www.mapbox.com/feedback/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-
-# Here set the shifts (in units of 5 minutes per shift) for the final forecast
-shifts = (1, 3, 5, 7, 9)
 
 
 def mapbox_parser(start_point, end_point, mode='cycling'):
