@@ -33,6 +33,32 @@ def toggle_fade(n):
 
 
 @callback(
+    Output("addresses-cache", "data"),
+    [Input("from_address", "value"), Input("to_address", "value")],
+    prevent_initial_call=True,
+)
+def save_addresses_into_cache(from_address, to_address):
+    # We don't check anything on the input because we want to save them regardless
+    return {"from_address": from_address, "to_address": to_address}
+
+
+@callback(
+    [
+        Output("from_address", "value"),
+        Output("to_address", "value"),
+    ],
+    Input('url', 'pathname'),
+    State("addresses-cache", "data"),
+)
+def load_addresses_from_cache(app_div, addresses_cache_data):
+    """
+    Should only load when the application first start and populate
+    the text boxes with the addresses that were saved in the cache
+    """
+    return addresses_cache_data["from_address"], addresses_cache_data["to_address"]
+
+
+@callback(
     [
         Output("from_address", "value", allow_duplicate=True),
         Output("to_address", "value", allow_duplicate=True),
@@ -127,7 +153,10 @@ def map_flyto(data):
     Output("time-plot", "figure"),
     [Input("intermediate-value", "data"), Input("switches-input", "value")],
 )
-def func(data, switch):
+def create_figure(data, switch):
+    """
+    Create the main figure with the results
+    """
     if len(data) > 0:
         df = pd.read_json(io.StringIO(data), orient="split")
         if not df.empty:
@@ -188,7 +217,7 @@ def get_radar_data_cached():
 
 
 @callback(
-    Output("from_address", "value"),
+    Output("from_address", "value", allow_duplicate=True),
     [
         Input("geolocation", "local_date"),  # need it just to force an update!
         Input("geolocation", "position"),
@@ -204,7 +233,7 @@ def update_location(_, pos, n_clicks):
 
 
 @callback(
-    [Output("layer", "children"), Output("to_address", "value")],
+    [Output("layer", "children"), Output("to_address", "value", allow_duplicate=True)],
     [Input("map", "clickData")],
     prevent_initial_call=True,
 )

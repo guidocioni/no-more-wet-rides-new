@@ -64,7 +64,7 @@ controls = dbc.Card(
     className="mb-2",
 )
 
-map_card = dbc.Card([html.Div(id="map-div")], className="mb-2")
+map_card = dbc.Card(html.Div(id="map-div"), className="mb-2")
 
 fig_card = dbc.Card(
     [

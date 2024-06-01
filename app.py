@@ -11,14 +11,14 @@ from layout_components import (
     alert_long_ride,
     back_to_top_button,
 )
-from settings import cache
+from settings import cache, URL_BASE_PATHNAME
 from callbacks import *
 
 
 app = dash.Dash(
     __name__,
     external_stylesheets=[dbc.themes.FLATLY, dbc.icons.FONT_AWESOME],
-    url_base_pathname="/nmwr/",
+    url_base_pathname=URL_BASE_PATHNAME,
     suppress_callback_exceptions=True,
     meta_tags=[{"name": "viewport", "content": "width=device-width, initial-scale=1"}],
     title="No more wet rides!",
@@ -33,6 +33,7 @@ cache.init_app(server)
 app.layout = dbc.Container(
     [
         html.H1("No more wet rides!"),
+        dcc.Location(id='url', refresh=False),
         html.H6(
             "A simple webapp to save your bike rides from the crappy german weather"
         ),
@@ -77,6 +78,7 @@ app.layout = dbc.Container(
         back_to_top_button,
         dcc.Store(id="intermediate-value", data={}),
         dcc.Store(id="garbage"),
+        dcc.Store(id='addresses-cache', storage_type='local')
     ],
     fluid=True,
 )
