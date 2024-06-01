@@ -355,7 +355,7 @@ def generate_map_plot(df):
         ],
             center=[center['lat'], center['lon']],
             zoom=zoom,
-            style={'width': '100%', 'height': '45vh',
+            style={'width': '100%', 'height': '35vh',
                    'margin': "auto", "display": "block"},
             id='map')]
     else:  # make an empty map
@@ -455,7 +455,7 @@ def make_empty_map(lat_center=51.326863, lon_center=10.354922, zoom=5):
     ],
         center=[lat_center, lon_center],
         zoom=zoom,
-        style={'width': '100%', 'height': '45vh',
+        style={'width': '100%', 'height': '35vh',
                'margin': "auto", "display": "block"},
         # touchZoom=False,
         # dragging=False,

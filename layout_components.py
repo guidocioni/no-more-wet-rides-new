@@ -82,26 +82,24 @@ fig_card = dbc.Card(
 )
 
 
-help_card = dbc.Card(
+help_card = dbc.Accordion(
     [
-        dbc.CardBody(
-            [
-                html.H4("Help", className="card-title"),
-                html.P(
-                    [
-                        "Enter the start and end point of your journey and press on generate. "
-                        "After a few seconds the graph will show precipitation forecast on your journey for different start times. You can then decide when to leave. "
-                        "For details see ",
-                        html.A(
-                            "here",
-                            href="https://github.com/guidocioni/no-more-wet-rides-new",
-                        ),
-                    ],
-                    className="card-text",
-                ),
-            ]
-        ),
+        dbc.AccordionItem(
+            html.Div(
+                [
+                    "Enter the start and end point of your journey and press on generate. "
+                    "After a few seconds the graph will show precipitation forecast on your journey for different start times. You can then decide when to leave. "
+                    "For details see ",
+                    html.A(
+                        "here",
+                        href="https://github.com/guidocioni/no-more-wet-rides-new",
+                    ),
+                ]
+            ),
+            title="Help (click to show)",
+        )
     ],
+    start_collapsed=True,
     className="mb-1",
 )
 
@@ -122,14 +120,14 @@ alert_long_ride = dbc.Alert(
 )
 
 back_to_top_button = dcc.Link(
-        dmc.Affix(
-            dbc.Button(
-                class_name="fa-solid fa-circle-chevron-up fa-3x",
-                outline=True,
-                id="back-to-top-button",
-                style={"display": "none"},
-            ),
-            position={"bottom": 10, "right": 10},
+    dmc.Affix(
+        dbc.Button(
+            class_name="fa-solid fa-circle-chevron-up fa-3x",
+            outline=True,
+            id="back-to-top-button",
+            style={"display": "none"},
         ),
-        href="#from_address",
-    )
+        position={"bottom": 10, "right": 10},
+    ),
+    href="#from_address",
+)

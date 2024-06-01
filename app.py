@@ -70,7 +70,12 @@ app.layout = dbc.Container(
                     align="center",
                 ),
                 dbc.Col(
-                    [dbc.Spinner(fig_card), help_card],
+                    [
+                        dbc.Collapse(
+                            dbc.Spinner(fig_card, fullscreen=True), id="fade-figure", is_open=False
+                        ),
+                        help_card,
+                    ],
                     sm=12,
                     md=12,
                     lg=7,
@@ -85,6 +90,20 @@ app.layout = dbc.Container(
     ],
     fluid=True,
 )
+
+
+@app.callback(
+    Output("fade-figure", "is_open"),
+    [Input("generate-button", "n_clicks")],
+)
+def toggle_fade(n):
+    '''
+    Hide the plots until the button hasn't been clicked
+    '''
+    if not n:
+        # Button has never been clicked
+        return False
+    return True
 
 
 @app.callback(
@@ -192,7 +211,7 @@ def func(data, switch):
             # Check if there is no rain at all beargfore plotting
             if (out.sum() < 0.01).all():
                 return utils.make_empty_figure(
-                    "🎉 Yey, no rain forecast on your ride 🎉"
+                    "🎉 Yey, no rain <br>forecast on your ride 🎉"
                 )
             else:
                 if switch == ["time_series"]:
@@ -363,13 +382,15 @@ clientside_callback(
 )
 
 
-# Scroll to the plot
+# Scroll to the plot when it is ready
 clientside_callback(
     """
     function(n_clicks, element_id) {
             var targetElement = document.getElementById(element_id);
             if (targetElement) {
-                targetElement.scrollIntoView({ behavior: 'smooth' });
+                setTimeout(function() {
+                    targetElement.scrollIntoView({ behavior: 'smooth' });
+                }, 500); // in milliseconds
             }
         return null;
     }
