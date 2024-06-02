@@ -38,7 +38,7 @@ app.layout = dbc.Container(
             "A simple webapp to save your bike rides from the crappy german weather"
         ),
         html.Hr(),
-        alert_outside_germany,
+        # alert_outside_germany,
         alert_long_ride,
         dbc.Row(
             [
@@ -63,7 +63,7 @@ app.layout = dbc.Container(
                 dbc.Col(
                     [
                         dbc.Collapse(
-                            dbc.Spinner(fig_card, fullscreen=True), id="fade-figure", is_open=False
+                            dbc.Spinner(fig_card), id="fade-figure", is_open=False
                         ),
                         help_card,
                     ],

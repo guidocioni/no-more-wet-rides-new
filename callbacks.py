@@ -6,13 +6,12 @@ from utils import (
     make_fig_time,
     make_fig_bars,
     get_place_address_reverse,
-    extract_rain_rate_from_radar,
-    subset_radar_data,
+    get_data,
     get_radar_data,
-    mapbox_parser,
+    get_directions,
 )
 from dash.exceptions import PreventUpdate
-from settings import shifts, cache
+from settings import shifts
 import pandas as pd
 import dash_leaflet as dl
 import io
@@ -47,7 +46,7 @@ def save_addresses_into_cache(from_address, to_address):
         Output("from_address", "value"),
         Output("to_address", "value"),
     ],
-    Input('url', 'pathname'),
+    Input("url", "pathname"),
     State("addresses-cache", "data"),
 )
 def load_addresses_from_cache(app_div, addresses_cache_data):
@@ -172,9 +171,9 @@ def create_figure(data, switch):
                 else:
                     return make_fig_bars(out)
         else:
-            return make_empty_figure()
+            raise PreventUpdate
     else:
-        return make_empty_figure()
+        raise PreventUpdate
 
 
 @callback(
@@ -198,22 +197,6 @@ def show_long_ride_warning(data):
             raise PreventUpdate
     else:
         raise PreventUpdate
-
-
-# Only retrieve directions if the inputs are changed,
-# otherwise use cached result
-@cache.memoize(900)
-def get_directions(from_address, to_address, mode):
-    return mapbox_parser(from_address, to_address, mode)
-
-
-# Only update radar data every 5 minutes, although this is not
-# really 100% correct as we should check the remote version
-# We should read the timestamp from the file and compare it with
-# the server
-@cache.memoize(300)
-def get_radar_data_cached():
-    return get_radar_data()
 
 
 @callback(
@@ -247,51 +230,30 @@ def map_click(clickData):
         raise PreventUpdate
 
 
-@cache.memoize(300)
-def filter_radar_cached(lon_bike, lat_bike):
-    lon_radar, lat_radar, time_radar, dtime_radar, rr = get_radar_data_cached()
-    lon_to_plot, lat_to_plot, rain_to_plot = subset_radar_data(
-        lon_radar, lat_radar, rr, lon_bike, lat_bike
-    )
-
-    return lon_to_plot, lat_to_plot, time_radar, dtime_radar, rain_to_plot
-
-
 @callback(
     Output("garbage", "data"),
     [Input("from_address", "value")],
     prevent_initial_call=True,
 )
 def fire_get_radar_data(from_address):
+    """
+    Whenever the user starts typing something in the from_address
+    field, we start downloading data so that they're already in the cache.
+    Note that we don't do any subsetting, we just download the data
+    """
     if from_address is not None:
         if len(from_address) != 6:
+            # Do not trigger unless the address is longer than a threshold
             raise PreventUpdate
         else:
-            _, _, _, _, _ = get_radar_data_cached()
+            get_radar_data()
             return None
     else:
-        return None
+        raise PreventUpdate
 
 
-@cache.memoize(300)
-def get_data(lons, lats, dtime):
-    lon_radar, lat_radar, time_radar, dtime_radar, rr = filter_radar_cached(lons, lats)
-
-    df = extract_rain_rate_from_radar(
-        lon_bike=lons,
-        lat_bike=lats,
-        dtime_bike=dtime,
-        time_radar=time_radar,
-        dtime_radar=dtime_radar,
-        lat_radar=lat_radar,
-        lon_radar=lon_radar,
-        rr=rr,
-    )
-
-    return df
-
-
-# Scroll back to top
+# Hide back-to-top button when the viewport is higher than a threshold
+# Here we choose 200, which works pretty well
 clientside_callback(
     """function (id) {
         var myID = document.getElementById(id)
@@ -327,5 +289,24 @@ clientside_callback(
     Output("garbage", "data", allow_duplicate=True),
     Input("time-plot", "figure"),
     [State("time-plot", "id")],
+    prevent_initial_call=True,
+)
+
+# Scroll to the map when it is ready
+clientside_callback(
+    """
+    function(n_clicks, element_id) {
+            var targetElement = document.getElementById(element_id);
+            if (targetElement) {
+                setTimeout(function() {
+                    targetElement.scrollIntoView({ behavior: 'smooth' });
+                }, 100); // in milliseconds
+            }
+        return null;
+    }
+    """,
+    Output("garbage", "data", allow_duplicate=True),
+    Input("map-div", "children"),
+    [State("map-div", "id")],
     prevent_initial_call=True,
 )

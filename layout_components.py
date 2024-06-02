@@ -76,7 +76,23 @@ fig_card = dbc.Card(
             id="switches-input",
             switch=True,
         ),
-        dcc.Graph(id="time-plot"),
+        dcc.Graph(
+            id="time-plot",
+            config={
+                "modeBarButtonsToRemove": [
+                    "select",
+                    "lasso2d",
+                    "zoomIn",
+                    "zoomOut",
+                    "resetScale",
+                    "autoScale",
+                    "pan2d",
+                    "toImage",
+                    "zoom2d"
+                ],
+                "displaylogo": False,
+            },
+        ),
     ],
     className="mb-2",
 )

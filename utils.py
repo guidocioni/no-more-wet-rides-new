@@ -10,12 +10,17 @@ import bz2
 import plotly.graph_objs as go
 import plotly.express as px
 from sklearn.neighbors import BallTree
-from settings import apiURL, mapURL, attribution, shifts, apiKey
+from settings import apiURL, mapURL, attribution, shifts, apiKey, cache
 import dash_leaflet as dl
 import tarfile
 
 
-def mapbox_parser(start_point, end_point, mode="cycling"):
+@cache.memoize(900)
+def get_directions(start_point, end_point, mode="cycling"):
+    '''
+    Get directions using mapbox API. Note that this is cached
+    so that we already use directions if we already have them.
+    '''
     # TODO - Interpolate output to have equally spaced points
     sourcePlace, sourceLon, sourceLat = get_place_address(start_point)
     destPlace, destLon, destLat = get_place_address(end_point)
@@ -38,6 +43,7 @@ def mapbox_parser(start_point, end_point, mode="cycling"):
     return sourcePlace, destPlace, lons, lats, dtime
 
 
+@cache.memoize(900)
 def get_place_address(place):
     apiURL_places = "https://api.mapbox.com/geocoding/v5/mapbox.places"
 
@@ -52,6 +58,7 @@ def get_place_address(place):
     return place_name, lon, lat
 
 
+@cache.memoize(900)
 def get_place_address_reverse(lon, lat):
     apiURL_places = "https://api.mapbox.com/geocoding/v5/mapbox.places"
 
@@ -120,10 +127,17 @@ def download_extract_url(url, data_path="/tmp/"):
     return extracted_files
 
 
+@cache.memoize(300)
 def get_radar_data(
     data_path="/tmp/",
     base_radar_url="https://opendata.dwd.de/weather/radar/composite/wn/",
 ):
+    '''
+    Only update radar data every 5 minutes, although this is not
+    really 100% correct as we should check the remote version
+    We should read the timestamp from the file and compare it with
+    the server
+    '''
     # Get a list of the files to be downloaded
     files = "WN_LATEST.tar.bz2"
 
@@ -232,6 +246,38 @@ def subset_radar_data(lon_radar, lat_radar, rr, lons, lats, offset=1):
     return lon_radar[indices], lat_radar[indices], rr[:, indices]
 
 
+@cache.memoize(300)
+def filter_radar_cached(lon_bike, lat_bike):
+    '''
+    Get the radar data and subset it so that we only process
+    the data on the bike trajectory
+    '''
+    lon_radar, lat_radar, time_radar, dtime_radar, rr = get_radar_data()
+    lon_to_plot, lat_to_plot, rain_to_plot = subset_radar_data(
+        lon_radar, lat_radar, rr, lon_bike, lat_bike
+    )
+
+    return lon_to_plot, lat_to_plot, time_radar, dtime_radar, rain_to_plot
+
+
+@cache.memoize(300)
+def get_data(lons, lats, dtime):
+    lon_radar, lat_radar, time_radar, dtime_radar, rr = filter_radar_cached(lons, lats)
+
+    df = extract_rain_rate_from_radar(
+        lon_bike=lons,
+        lat_bike=lats,
+        dtime_bike=dtime,
+        time_radar=time_radar,
+        dtime_radar=dtime_radar,
+        lat_radar=lat_radar,
+        lon_radar=lon_radar,
+        rr=rr,
+    )
+
+    return df
+
+
 def convert_to_dataframe(rain_bike, dtime_bike, time_radar):
     """
     Convert the forecast in a well-formatted dataframe which can then be plotted or converted
@@ -280,7 +326,7 @@ def zoom_center(
     format: str = "lonlat",
     projection: str = "mercator",
     width_to_height: float = 2.0,
-) -> (float, dict):
+):
     """Finds optimal zoom and centering for a plotly mapbox.
     Must be passed (lons & lats) or lonlats.
     Temporary solution awaiting official implementation, see:
