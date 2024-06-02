@@ -1,6 +1,8 @@
 import dash_bootstrap_components as dbc
 import dash_mantine_components as dmc
 from dash import dcc, html
+from settings import mapURL, attribution
+import dash_leaflet as dl
 
 
 controls = dbc.Card(
@@ -64,7 +66,44 @@ controls = dbc.Card(
     className="mb-2",
 )
 
-map_card = dbc.Card(html.Div(id="map-div"), className="mb-2")
+map_card = dbc.Card(
+    html.Div(
+        id="map-div",
+        children=[
+            dl.Map(
+                children=[
+                    dl.TileLayer(
+                        url=mapURL, attribution=attribution, tileSize=512, zoomOffset=-1
+                    ),
+                    dl.LayerGroup(id="layer"),
+                    dl.LayerGroup(id="track-layer"),
+                    dl.WMSTileLayer(
+                        url="https://maps.dwd.de/geoserver/ows?",
+                        layers="dwd:RX-Produkt",
+                        format="image/png",
+                        transparent=True,
+                        opacity=0.7,
+                        version="1.3.0",
+                        detectRetina=True,
+                    ),
+                ],
+                center=[51.326863, 10.354922],
+                zoom=5,
+                style={
+                    "width": "100%",
+                    "height": "35vh",
+                    "margin": "auto",
+                    "display": "block",
+                },
+                # touchZoom=False,
+                # dragging=False,
+                scrollWheelZoom=False,
+                id="map",
+            )
+        ],
+    ),
+    className="mb-2",
+)
 
 fig_card = dbc.Card(
     [
@@ -88,7 +127,7 @@ fig_card = dbc.Card(
                     "autoScale",
                     "pan2d",
                     "toImage",
-                    "zoom2d"
+                    "zoom2d",
                 ],
                 "displaylogo": False,
             },

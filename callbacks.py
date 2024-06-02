@@ -1,6 +1,5 @@
 from dash import Input, Output, callback, State, clientside_callback
 from utils import (
-    generate_map_plot,
     zoom_center,
     make_empty_figure,
     make_fig_time,
@@ -13,6 +12,7 @@ from utils import (
 from dash.exceptions import PreventUpdate
 from settings import shifts
 import pandas as pd
+import numpy as np
 import dash_leaflet as dl
 import io
 
@@ -91,7 +91,11 @@ def update_now(click):
 
 
 @callback(
-    [Output("map-div", "children"), Output("intermediate-value", "data")],
+    [
+        Output("track-layer", "children"),
+        Output("intermediate-value", "data"),
+        Output("map", "viewport"),
+    ],
     [Input("generate-button", "n_clicks")],
     [
         State("from_address", "value"),
@@ -106,7 +110,7 @@ def create_coords_and_map(n_clicks, from_address, to_address, mode):
     it.
     """
     if n_clicks is None:
-        return generate_map_plot(df=None), {}
+        raise PreventUpdate
     else:
         if from_address is not None and to_address is not None:
             source, dest, lons, lats, dtime = get_directions(
@@ -122,30 +126,23 @@ def create_coords_and_map(n_clicks, from_address, to_address, mode):
                     "destination": dest,
                 }
             )
-            fig = generate_map_plot(df)
-            return fig, df.to_json(date_format="iso", orient="split")
-        else:
-            return generate_map_plot(df=None), {}
-
-
-@callback(
-    Output("map", "viewport"),
-    Input("intermediate-value", "data"),
-    prevent_intial_call=True,
-)
-def map_flyto(data):
-    """
-    When there is some trajectory zoom the map on it
-    """
-    if len(data) > 0:
-        df = pd.read_json(io.StringIO(data), orient="split")
-        if not df.empty:
-            zoom, center = zoom_center(
-                df.lons.values, df.lats.values, width_to_height=0.5
+            # Append the elements containing the trajectories
+            trajectory = np.vstack([lats, lons]).T.tolist()
+            start_point = df.source.values[0]
+            end_point = df.destination.values[0]
+            new_children = [
+                dl.Polyline(positions=trajectory),
+                dl.Marker(position=trajectory[0], children=dl.Tooltip(start_point)),
+                dl.Marker(position=trajectory[-1], children=dl.Tooltip(end_point)),
+            ]
+            zoom, center = zoom_center(lons, lats, width_to_height=8)
+            return (
+                new_children,
+                df.to_json(date_format="iso", orient="split"),
+                dict(center=[center["lat"], center["lon"]], zoom=zoom),
             )
-
-            return dict(center=[center["lat"], center["lon"]], zoom=zoom)
-    raise PreventUpdate
+        else:
+            raise PreventUpdate
 
 
 @callback(

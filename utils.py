@@ -408,50 +408,6 @@ def zoom_center(
     return zoom, center
 
 
-def generate_map_plot(df):
-    if df is not None:
-        lons = df.lons.values
-        lats = df.lats.values
-        trajectory = np.vstack([lats, lons]).T.tolist()
-        start_point = df.source.values[0]
-        end_point = df.destination.values[0]
-        zoom, center = zoom_center(lons, lats, width_to_height=8)
-
-        fig = [
-            dl.Map(
-                [
-                    dl.TileLayer(
-                        url=mapURL, attribution=attribution, tileSize=512, zoomOffset=-1
-                    ),
-                    dl.LayerGroup(id="layer"),
-                    dl.WMSTileLayer(
-                        url="https://maps.dwd.de/geoserver/ows?",
-                        layers="dwd:RX-Produkt",
-                        format="image/png",
-                        transparent=True,
-                        opacity=0.7,
-                    ),
-                    dl.Polyline(positions=trajectory),
-                    dl.Marker(position=trajectory[0], children=dl.Tooltip(start_point)),
-                    dl.Marker(position=trajectory[-1], children=dl.Tooltip(end_point)),
-                ],
-                center=[center["lat"], center["lon"]],
-                zoom=zoom,
-                style={
-                    "width": "100%",
-                    "height": "35vh",
-                    "margin": "auto",
-                    "display": "block",
-                },
-                id="map",
-            )
-        ]
-    else:  # make an empty map
-        fig = make_empty_map()
-
-    return fig
-
-
 def make_fig_time(df):
     if df is not None:
         df = df.rename(
@@ -523,41 +479,5 @@ def make_empty_figure(text="No data (yet 😃)"):
         margin={"r": 0.1, "t": 0.1, "l": 0.1, "b": 0.1},
         template="plotly_white",
     )
-
-    return fig
-
-
-def make_empty_map(lat_center=51.326863, lon_center=10.354922, zoom=5):
-    fig = [
-        dl.Map(
-            [
-                dl.TileLayer(
-                    url=mapURL, attribution=attribution, tileSize=512, zoomOffset=-1
-                ),
-                dl.LayerGroup(id="layer"),
-                dl.WMSTileLayer(
-                    url="https://maps.dwd.de/geoserver/ows?",
-                    layers="dwd:RX-Produkt",
-                    format="image/png",
-                    transparent=True,
-                    opacity=0.7,
-                    version="1.3.0",
-                    detectRetina=True,
-                ),
-            ],
-            center=[lat_center, lon_center],
-            zoom=zoom,
-            style={
-                "width": "100%",
-                "height": "35vh",
-                "margin": "auto",
-                "display": "block",
-            },
-            # touchZoom=False,
-            # dragging=False,
-            scrollWheelZoom=False,
-            id="map",
-        )
-    ]
 
     return fig

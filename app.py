@@ -33,7 +33,7 @@ cache.init_app(server)
 app.layout = dbc.Container(
     [
         html.H1("No more wet rides!"),
-        dcc.Location(id='url', refresh=False),
+        dcc.Location(id="url", refresh=False),
         html.H6(
             "A simple webapp to save your bike rides from the crappy german weather"
         ),
@@ -78,11 +78,10 @@ app.layout = dbc.Container(
         back_to_top_button,
         dcc.Store(id="intermediate-value", data={}),
         dcc.Store(id="garbage"),
-        dcc.Store(id='addresses-cache', storage_type='local')
+        dcc.Store(id="addresses-cache", storage_type="local"),
     ],
     fluid=True,
 )
-
 
 
 # @server.route("/nmwr/query", methods=["GET", "POST"])
@@ -107,7 +106,6 @@ app.layout = dbc.Container(
 #         return out.to_json(orient="split", date_format="iso")
 #     else:
 #         return None
-
 
 
 if __name__ == "__main__":
