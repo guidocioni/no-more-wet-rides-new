@@ -29,8 +29,10 @@ def serve_layout():
             dbc.Container(page_container, class_name="my-2", id="content"),
             footer,
             dcc.Store(id="intermediate-value", data={}),
+            dcc.Store(id="intermediate-value-point", data={}),
             dcc.Store(id="garbage"),
             dcc.Store(id="addresses-cache", storage_type="local"),
+            dcc.Store(id="point-cache", storage_type="local"),
         ],
     )
 

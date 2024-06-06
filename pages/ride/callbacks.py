@@ -263,26 +263,26 @@ clientside_callback(
     }
     """,
     Output("garbage", "data", allow_duplicate=True),
-    Input("time-plot", "figure"),
+    Input("intermediate-value", "data"),
     [State("time-plot", "id")],
     prevent_initial_call=True,
 )
 
-# Scroll to the map when it is ready
-clientside_callback(
-    """
-    function(n_clicks, element_id) {
-            var targetElement = document.getElementById(element_id);
-            if (targetElement) {
-                setTimeout(function() {
-                    targetElement.scrollIntoView({ behavior: 'smooth' });
-                }, 100); // in milliseconds
-            }
-        return null;
-    }
-    """,
-    Output("garbage", "data", allow_duplicate=True),
-    Input("map-div", "children"),
-    [State("map-div", "id")],
-    prevent_initial_call=True,
-)
+# # Scroll to the map when it is ready
+# clientside_callback(
+#     """
+#     function(n_clicks, element_id) {
+#             var targetElement = document.getElementById(element_id);
+#             if (targetElement) {
+#                 setTimeout(function() {
+#                     targetElement.scrollIntoView({ behavior: 'smooth' });
+#                 }, 100); // in milliseconds
+#             }
+#         return null;
+#     }
+#     """,
+#     Output("garbage", "data", allow_duplicate=True),
+#     Input("map-div", "children"),
+#     [State("map-div", "id")],
+#     prevent_initial_call=True,
+# )
