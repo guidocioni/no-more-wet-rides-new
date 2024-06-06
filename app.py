@@ -1,22 +1,12 @@
 import dash
 import dash_bootstrap_components as dbc
-from dash import dcc, html
-from flask import request
-from layout_components import (
-    controls,
-    map_card,
-    fig_card,
-    help_card,
-    alert_outside_germany,
-    alert_long_ride,
-    back_to_top_button,
-)
-from settings import cache, URL_BASE_PATHNAME
-from callbacks import *
-
+from dash import dcc, html, page_container, Input, Output, clientside_callback
+from utils.settings import cache, URL_BASE_PATHNAME
+from components import navbar, footer
 
 app = dash.Dash(
     __name__,
+    use_pages=True,
     external_stylesheets=[dbc.themes.FLATLY, dbc.icons.FONT_AWESOME],
     url_base_pathname=URL_BASE_PATHNAME,
     suppress_callback_exceptions=True,
@@ -30,59 +20,42 @@ server = app.server
 cache.init_app(server)
 
 
-app.layout = dbc.Container(
-    [
-        html.H1("No more wet rides!"),
-        dcc.Location(id="url", refresh=False),
-        html.H6(
-            "A simple webapp to save your bike rides from the crappy german weather"
-        ),
-        html.Hr(),
-        # alert_outside_germany,
-        alert_long_ride,
-        dbc.Row(
-            [
-                dbc.Col(
-                    [
-                        dbc.Row(
-                            [
-                                dbc.Col(controls),
-                            ],
-                        ),
-                        dbc.Row(
-                            [
-                                dbc.Col(map_card),
-                            ],
-                        ),
-                    ],
-                    sm=12,
-                    md=12,
-                    lg=4,
-                    align="center",
-                ),
-                dbc.Col(
-                    [
-                        dbc.Collapse(
-                            dbc.Spinner(fig_card), id="fade-figure", is_open=False
-                        ),
-                        help_card,
-                    ],
-                    sm=12,
-                    md=12,
-                    lg=7,
-                    align="center",
-                ),
-            ],
-            justify="center",
-        ),
-        back_to_top_button,
-        dcc.Store(id="intermediate-value", data={}),
-        dcc.Store(id="garbage"),
-        dcc.Store(id="addresses-cache", storage_type="local"),
-    ],
-    fluid=True,
-)
+def serve_layout():
+    return html.Div(
+        [
+            
+            dcc.Location(id="url", refresh=False),
+            navbar(),
+            dbc.Container(page_container, class_name="my-2", id="content"),
+            footer,
+            dcc.Store(id="intermediate-value", data={}),
+            dcc.Store(id="garbage"),
+            dcc.Store(id="addresses-cache", storage_type="local"),
+        ],
+    )
 
+
+app.layout = serve_layout
+
+# Hide back-to-top button when the viewport is higher than a threshold
+# Here we choose 200, which works pretty well
+clientside_callback(
+    """function (id) {
+        var myID = document.getElementById(id)
+        var myScrollFunc = function() {
+          var y = window.scrollY;
+          if (y >= 200) {
+            myID.style.display = ""
+          } else {
+            myID.style.display = "none"
+          }
+        };
+        window.addEventListener("scroll", myScrollFunc);
+        return window.dash_clientside.no_update
+    }""",
+    Output("back-to-top-button", "id"),
+    Input("back-to-top-button", "id"),
+)
 
 # @server.route("/nmwr/query", methods=["GET", "POST"])
 # def query():
@@ -109,4 +82,4 @@ app.layout = dbc.Container(
 
 
 if __name__ == "__main__":
-    app.run_server()
+    app.run()

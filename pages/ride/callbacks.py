@@ -1,5 +1,5 @@
 from dash import Input, Output, callback, State, clientside_callback
-from utils import (
+from utils.utils import (
     zoom_center,
     make_empty_figure,
     make_fig_time,
@@ -10,7 +10,7 @@ from utils import (
     get_directions,
 )
 from dash.exceptions import PreventUpdate
-from settings import shifts
+from utils.settings import shifts
 import pandas as pd
 import numpy as np
 import dash_leaflet as dl
@@ -247,27 +247,6 @@ def fire_get_radar_data(from_address):
             return None
     else:
         raise PreventUpdate
-
-
-# Hide back-to-top button when the viewport is higher than a threshold
-# Here we choose 200, which works pretty well
-clientside_callback(
-    """function (id) {
-        var myID = document.getElementById(id)
-        var myScrollFunc = function() {
-          var y = window.scrollY;
-          if (y >= 200) {
-            myID.style.display = ""
-          } else {
-            myID.style.display = "none"
-          }
-        };
-        window.addEventListener("scroll", myScrollFunc);
-        return window.dash_clientside.no_update
-    }""",
-    Output("back-to-top-button", "id"),
-    Input("back-to-top-button", "id"),
-)
 
 
 # Scroll to the plot when it is ready

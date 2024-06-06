@@ -1,9 +1,10 @@
 import dash_bootstrap_components as dbc
-import dash_mantine_components as dmc
-from dash import dcc, html
-from settings import mapURL, attribution
+from dash import dcc, html, register_page
+from utils.settings import mapURL, attribution
+from .callbacks import *
 import dash_leaflet as dl
 
+register_page(__name__, path="/", title="Ride forecast")
 
 controls = dbc.Card(
     [
@@ -174,15 +175,44 @@ alert_long_ride = dbc.Alert(
     id="long-ride-alert",
 )
 
-back_to_top_button = dcc.Link(
-    dmc.Affix(
-        dbc.Button(
-            class_name="fa-solid fa-circle-chevron-up fa-3x",
-            outline=True,
-            id="back-to-top-button",
-            style={"display": "none"},
-        ),
-        position={"bottom": 10, "right": 10},
-    ),
-    href="#from_address",
+
+layout = html.Div(
+    [
+        alert_long_ride,
+        dbc.Row(
+            [
+                dbc.Col(
+                    [
+                        dbc.Row(
+                            [
+                                dbc.Col(controls),
+                            ],
+                        ),
+                        dbc.Row(
+                            [
+                                dbc.Col(map_card),
+                            ],
+                        ),
+                    ],
+                    sm=12,
+                    md=12,
+                    lg=4,
+                    align="center",
+                ),
+                dbc.Col(
+                    [
+                        dbc.Collapse(
+                            dbc.Spinner(fig_card), id="fade-figure", is_open=False
+                        ),
+                        help_card,
+                    ],
+                    sm=12,
+                    md=12,
+                    lg=7,
+                    align="center",
+                ),
+            ],
+            justify="center",
+        )
+    ]
 )

@@ -1,7 +1,6 @@
 import pandas as pd
 from datetime import timedelta
 import re
-import radolan as radar
 import requests
 import os
 import numpy as np
@@ -10,8 +9,8 @@ import bz2
 import plotly.graph_objs as go
 import plotly.express as px
 from sklearn.neighbors import BallTree
-from settings import apiURL, mapURL, attribution, shifts, apiKey, cache
-import dash_leaflet as dl
+from .settings import apiURL, shifts, apiKey, cache
+from .radolan import read_radolan_composite, get_latlon_radar, to_rain_rate
 import tarfile
 
 
@@ -157,7 +156,7 @@ def process_radar_data(fnames):
     time_radar = []
     # I tried to parallelize this but it actually becomes slower
     for fname in fnames:
-        rxdata, rxattrs = radar.read_radolan_composite(fname)
+        rxdata, rxattrs = read_radolan_composite(fname)
         data.append(rxdata)
         minute = int(re.findall(r"(?:_)(\d{3})", fname)[0])
         time_radar.append((rxattrs["datetime"] + timedelta(minutes=minute)))
@@ -173,7 +172,7 @@ def process_radar_data(fnames):
     rr = data
 
     # Get coordinates (space/time)
-    lon_radar, lat_radar = radar.get_latlon_radar()
+    lon_radar, lat_radar = get_latlon_radar()
     time_radar = convert_timezone(pd.to_datetime(time_radar))
     dtime_radar = time_radar - time_radar[0]
 
@@ -221,7 +220,7 @@ def extract_rain_rate_from_radar(
     rain_bike = rain_bike[:, id_radar_data != shifted]
     dtime_bike = dtime_bike[id_radar_data != shifted]
     # Convert from reflectivity to rain rate
-    rain_bike = radar.to_rain_rate(rain_bike)
+    rain_bike = to_rain_rate(rain_bike)
 
     df = convert_to_dataframe(rain_bike, dtime_bike, time_radar)
 

@@ -20,13 +20,8 @@ Reading RADOLAN data from German Weather Service
 # standard libraries
 # from __future__ import absolute_import
 import datetime as dt
-
-try:
-    from StringIO import StringIO
-    import io
-except ImportError:
-    from io import StringIO  # noqa
-    import io
+from io import StringIO  # noqa
+import io
 
 import re
 import warnings
