@@ -8,27 +8,30 @@ register_page(__name__, path="/point", title="Point forecast")
 
 controls = dbc.Card(
     [
-        dbc.InputGroup(
-            [
-                dcc.Geolocation(id="geolocation"),
-                dbc.InputGroupText("point"),
-                dbc.Input(
-                    placeholder="type address or geolocate",
-                    id="point_address",
-                    type="text",
-                    autocomplete="street-address",
-                    persistence=True,
-                ),
-                dbc.Button(
-                    id="geolocate",
-                    className="fa-solid fa-location-dot col-2",
-                    color="secondary",
-                    outline=False,
-                ),
-            ],
-            className="mb-2",
+        dcc.Geolocation(id="geolocation"),
+        dbc.Spinner(
+            dbc.InputGroup(
+                [
+                    dbc.InputGroupText("Where?"),
+                    dbc.Input(
+                        placeholder="type address or geolocate",
+                        id="point_address",
+                        type="text",
+                        autocomplete="street-address",
+                        persistence=True,
+                    ),
+                    dbc.Button(
+                        id="geolocate",
+                        className="fa-solid fa-location-dot col-2",
+                        color="secondary",
+                        outline=False,
+                    ),
+                ],
+                className="mb-2 col-12",
+            ),
+            type="grow",
         ),
-        dbc.Button("Generate", id="generate-button-point", className="mr-2"),
+        dbc.Button("Generate", id="generate-button-point", className="mr-2 col-12"),
     ],
     body=True,
     className="mb-2",
@@ -45,7 +48,7 @@ map_card = dbc.Card(
                     ),
                     dl.LayerGroup(id="layer-point"),
                     dl.WMSTileLayer(
-                        id='wms-layer-point',
+                        id="wms-layer-point",
                         url="https://maps.dwd.de/geoserver/ows?",
                         layers="dwd:RX-Produkt",
                         format="image/png",
@@ -100,11 +103,7 @@ fig_card = dbc.Card(
 help_card = dbc.Accordion(
     [
         dbc.AccordionItem(
-            html.Div(
-                [
-                    ""
-                ]
-            ),
+            html.Div([""]),
             title="Help (click to show)",
         )
     ],

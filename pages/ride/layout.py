@@ -8,44 +8,50 @@ register_page(__name__, path="/", title="Ride forecast")
 
 controls = dbc.Card(
     [
-        dbc.InputGroup(
-            [
-                dcc.Geolocation(id="geolocation"),
-                dbc.InputGroupText("from"),
-                dbc.Input(
-                    placeholder="type address or geolocate",
-                    id="from_address",
-                    type="text",
-                    autocomplete="street-address",
-                    persistence=True,
-                ),
-                dbc.Button(
-                    id="geolocate",
-                    className="fa-solid fa-location-dot col-2",
-                    color="secondary",
-                    outline=False,
-                ),
-            ],
-            className="mb-2",
+        dcc.Geolocation(id="geolocation"),
+        dbc.Spinner(
+            dbc.InputGroup(
+                [
+                    dbc.InputGroupText("from"),
+                    dbc.Input(
+                        placeholder="type address or geolocate",
+                        id="from_address",
+                        type="text",
+                        autocomplete="street-address",
+                        persistence=True,
+                    ),
+                    dbc.Button(
+                        id="geolocate",
+                        className="fa-solid fa-location-dot col-2",
+                        color="secondary",
+                        outline=False,
+                    ),
+                ],
+                className="mb-2 col-12",
+            ),
+            type="grow",
         ),
-        dbc.InputGroup(
-            [
-                dbc.InputGroupText("to"),
-                dbc.Input(
-                    placeholder="type address or click on map",
-                    id="to_address",
-                    type="text",
-                    autocomplete="street-address",
-                    persistence=True,
-                ),
-                dbc.Button(
-                    id="exchange",
-                    className="fa-solid fa-exchange col-2",
-                    color="secondary",
-                    outline=False,
-                ),
-            ],
-            className="mb-2",
+        dbc.Spinner(
+            dbc.InputGroup(
+                [
+                    dbc.InputGroupText("to"),
+                    dbc.Input(
+                        placeholder="type address or click on map",
+                        id="to_address",
+                        type="text",
+                        autocomplete="street-address",
+                        persistence=True,
+                    ),
+                    dbc.Button(
+                        id="exchange",
+                        className="fa-solid fa-exchange col-2",
+                        color="secondary",
+                        outline=False,
+                    ),
+                ],
+                className="mb-2 col-12",
+            ),
+            type="grow",
         ),
         dbc.InputGroup(
             [
@@ -59,9 +65,9 @@ controls = dbc.Card(
                     ],
                 ),
             ],
-            className="mb-3",
+            className="mb-3 col-12",
         ),
-        dbc.Button("Generate", id="generate-button", className="mr-2"),
+        dbc.Button("Generate", id="generate-button", className="mr-2 col-12"),
     ],
     body=True,
     className="mb-2",
@@ -213,6 +219,6 @@ layout = html.Div(
                 ),
             ],
             justify="center",
-        )
+        ),
     ]
 )
