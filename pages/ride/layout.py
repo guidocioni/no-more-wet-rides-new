@@ -92,13 +92,13 @@ map_card = dbc.Card(
                 zoom=5,
                 style={
                     "width": "100%",
-                    "height": "35vh",
+                    "height": "40vh",
                     "margin": "auto",
                     "display": "block",
                 },
-                # touchZoom=False,
-                # dragging=False,
-                scrollWheelZoom=False,
+                touchZoom=False,
+                dragging=False,
+                scrollWheelZoom=True,
                 id="map",
             )
         ],

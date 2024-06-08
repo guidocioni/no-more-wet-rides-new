@@ -54,7 +54,9 @@ def load_addresses_from_cache(app_div, addresses_cache_data):
     Should only load when the application first start and populate
     the text boxes with the addresses that were saved in the cache
     """
-    return addresses_cache_data["from_address"], addresses_cache_data["to_address"]
+    return addresses_cache_data.get("from_address", ""), addresses_cache_data.get(
+        "to_address", ""
+    )
 
 
 @callback(
@@ -84,10 +86,7 @@ def update_now(click):
     """
     Force a request for geolocate
     """
-    if not click:
-        raise PreventUpdate
-    else:
-        return True
+    return True if click and click > 0 else False
 
 
 @callback(
@@ -169,8 +168,7 @@ def create_figure(data, switch):
                     return make_fig_bars(out)
         else:
             raise PreventUpdate
-    else:
-        raise PreventUpdate
+    raise PreventUpdate
 
 
 @callback(
@@ -192,8 +190,7 @@ def show_long_ride_warning(data):
                 return False
         else:
             raise PreventUpdate
-    else:
-        raise PreventUpdate
+    raise PreventUpdate
 
 
 @callback(
@@ -208,8 +205,7 @@ def show_long_ride_warning(data):
 def update_location(_, pos, n_clicks):
     if pos and n_clicks:
         return get_place_address_reverse(pos["lon"], pos["lat"])
-    else:
-        raise PreventUpdate
+    raise PreventUpdate
 
 
 @callback(
@@ -223,8 +219,7 @@ def map_click(clickData):
         lon = clickData["latlng"]["lng"]
         address = get_place_address_reverse(lon, lat)
         return [dl.Marker(position=[lat, lon], children=dl.Tooltip(address))], address
-    else:
-        raise PreventUpdate
+    raise PreventUpdate
 
 
 @callback(
@@ -245,8 +240,7 @@ def fire_get_radar_data(from_address):
         else:
             get_radar_data()
             return None
-    else:
-        raise PreventUpdate
+    raise PreventUpdate
 
 
 # Scroll to the plot when it is ready
@@ -267,22 +261,3 @@ clientside_callback(
     [State("time-plot", "id")],
     prevent_initial_call=True,
 )
-
-# # Scroll to the map when it is ready
-# clientside_callback(
-#     """
-#     function(n_clicks, element_id) {
-#             var targetElement = document.getElementById(element_id);
-#             if (targetElement) {
-#                 setTimeout(function() {
-#                     targetElement.scrollIntoView({ behavior: 'smooth' });
-#                 }, 100); // in milliseconds
-#             }
-#         return null;
-#     }
-#     """,
-#     Output("garbage", "data", allow_duplicate=True),
-#     Input("map-div", "children"),
-#     [State("map-div", "id")],
-#     prevent_initial_call=True,
-# )

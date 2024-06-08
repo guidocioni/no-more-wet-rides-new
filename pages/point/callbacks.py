@@ -10,6 +10,7 @@ from dash.exceptions import PreventUpdate
 import numpy as np
 import dash_leaflet as dl
 import plotly.graph_objects as go
+import time
 
 
 @callback(
@@ -46,7 +47,7 @@ def load_address_from_cache(app_div, point_cache_data):
     Should only load when the application first start and populate
     the text boxes with the point that were saved in the cache
     """
-    return point_cache_data["point_address"]
+    return point_cache_data.get("point_address", "")
 
 
 @callback(
@@ -125,26 +126,36 @@ def update_now(click):
     """
     Force a request for geolocate
     """
-    if not click:
-        raise PreventUpdate
-    else:
-        return True
+    return True if click and click > 0 else False
 
 
 @callback(
-    Output("point_address", "value", allow_duplicate=True),
     [
-        Input("geolocation", "local_date"),  # need it just to force an update!
-        Input("geolocation", "position"),
+        Output("point_address", "value", allow_duplicate=True),
+        Output("layer-point", "children", allow_duplicate=True),
+        Output("map-point", "viewport", allow_duplicate=True),
     ],
-    State("geolocate", "n_clicks"),
+    Input("geolocation", "local_date"),  # need it just to force an update!
+    [State("geolocation", "position"), State("geolocate", "n_clicks")],
     prevent_initial_call=True,
 )
 def update_location(_, pos, n_clicks):
+    """
+    After forcing a geolocation request, once the local_date changes then read the position,
+    perform reverse geocoding and update the map
+    """
     if pos and n_clicks:
-        return get_place_address_reverse(pos["lon"], pos["lat"])
-    else:
-        raise PreventUpdate
+        address = get_place_address_reverse(pos["lon"], pos["lat"])
+        return (
+            address,
+            [
+                dl.Marker(
+                    position=[pos["lat"], pos["lon"]], children=dl.Tooltip(address)
+                )
+            ],
+            dict(center=[pos["lat"], pos["lon"]], zoom=8),
+        )
+    raise PreventUpdate
 
 
 @callback(
@@ -161,8 +172,7 @@ def map_click(clickData):
         lon = clickData["latlng"]["lng"]
         address = get_place_address_reverse(lon, lat)
         return [dl.Marker(position=[lat, lon], children=dl.Tooltip(address))], address
-    else:
-        raise PreventUpdate
+    raise PreventUpdate
 
 
 @callback(
@@ -182,12 +192,10 @@ def fire_get_radar_data(from_address):
             raise PreventUpdate
         else:
             get_radar_data()
-            return None
-    else:
-        raise PreventUpdate
+    raise PreventUpdate
 
 
-# Scroll to the plot when it is ready
+# Scroll to the plot 500 ms after the generate button has been pressed
 clientside_callback(
     """
     function(n_clicks, element_id) {
@@ -206,21 +214,12 @@ clientside_callback(
     prevent_initial_call=True,
 )
 
-# # Scroll to the map when it is ready
-# clientside_callback(
-#     """
-#     function(n_clicks, element_id) {
-#             var targetElement = document.getElementById(element_id);
-#             if (targetElement) {
-#                 setTimeout(function() {
-#                     targetElement.scrollIntoView({ behavior: 'smooth' });
-#                 }, 100); // in milliseconds
-#             }
-#         return null;
-#     }
-#     """,
-#     Output("garbage", "data", allow_duplicate=True),
-#     Input("map-div", "children"),
-#     [State("map-div", "id")],
+# Refresh WMS tiles every minute
+# @callback(
+#     Output("wms-layer-point", "url"),
+#     Input("interval-wms-refresh", "n_intervals"),
 #     prevent_initial_call=True,
 # )
+# def refresh_wms(n_intervals):
+#     if n_intervals > 0:
+#         return f"https://maps.dwd.de/geoserver/ows?cache={int(time.time())}"
