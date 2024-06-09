@@ -18,12 +18,14 @@ server = app.server
 
 # Initialize cache
 cache.init_app(server)
+# Clear cache at app initialization
+with server.app_context():
+    cache.clear()
 
 
 def serve_layout():
     return html.Div(
         [
-            
             dcc.Location(id="url", refresh=False),
             navbar(),
             dbc.Container(page_container, class_name="my-2", id="content"),
@@ -33,7 +35,9 @@ def serve_layout():
             dcc.Store(id="garbage"),
             dcc.Store(id="addresses-cache", storage_type="local"),
             dcc.Store(id="point-cache", storage_type="local"),
-            dcc.Interval(id='interval-wms-refresh', interval=60000, n_intervals=0),  # 60 seconds
+            dcc.Interval(
+                id="interval-wms-refresh", interval=60000, n_intervals=0
+            ),  # 60 seconds
         ],
     )
 

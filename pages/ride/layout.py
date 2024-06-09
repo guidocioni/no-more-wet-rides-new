@@ -8,7 +8,7 @@ register_page(__name__, path="/", title="Ride forecast")
 
 controls = dbc.Card(
     [
-        dcc.Geolocation(id="geolocation"),
+        html.Div(id="geo"),
         dbc.Spinner(
             dbc.InputGroup(
                 [

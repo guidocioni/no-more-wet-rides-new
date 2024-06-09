@@ -3,31 +3,37 @@ from datetime import timedelta
 import re
 import requests
 import os
+import glob
 import numpy as np
 import json
 import bz2
 import plotly.graph_objs as go
 import plotly.express as px
 from sklearn.neighbors import BallTree
-from .settings import apiURL, shifts, apiKey, cache
+from .settings import (
+    shifts,
+    apiKey,
+    cache,
+    CACHE_DIR,
+    RADAR_URL,
+    APIURL_PLACES,
+    APIURL_DIRECTIONS,
+)
 from .radolan import read_radolan_composite, get_latlon_radar, to_rain_rate
 import tarfile
 
 
 @cache.memoize(900)
 def get_directions(start_point, end_point, mode="cycling"):
-    '''
+    """
     Get directions using mapbox API. Note that this is cached
     so that we already use directions if we already have them.
-    '''
+    """
     # TODO - Interpolate output to have equally spaced points
     sourcePlace, sourceLon, sourceLat = get_place_address(start_point)
     destPlace, destLon, destLat = get_place_address(end_point)
 
-    url = (
-        "%s/%s/%4.5f,%4.5f;%4.5f,%4.5f?geometries=geojson&annotations=duration,distance&overview=full&access_token=%s"
-        % (apiURL, mode, sourceLon, sourceLat, destLon, destLat, apiKey)
-    )
+    url = f"{APIURL_DIRECTIONS}/{mode}/{sourceLon:4.5f},{sourceLat:4.5f};{destLon:4.5f},{destLat:4.5f}?geometries=geojson&annotations=duration,distance&overview=full&access_token={apiKey}"
 
     response = requests.get(url)
     json_data = json.loads(response.text)
@@ -44,9 +50,7 @@ def get_directions(start_point, end_point, mode="cycling"):
 
 @cache.memoize(900)
 def get_place_address(place):
-    apiURL_places = "https://api.mapbox.com/geocoding/v5/mapbox.places"
-
-    url = "%s/%s.json?&access_token=%s&country=DE" % (apiURL_places, place, apiKey)
+    url = f"{APIURL_PLACES}/{place}.json?&access_token={apiKey}&country=DE"
 
     response = requests.get(url)
     json_data = json.loads(response.text)
@@ -59,14 +63,7 @@ def get_place_address(place):
 
 @cache.memoize(900)
 def get_place_address_reverse(lon, lat):
-    apiURL_places = "https://api.mapbox.com/geocoding/v5/mapbox.places"
-
-    url = "%s/%s,%s.json?&access_token=%s&country=DE&types=address" % (
-        apiURL_places,
-        lon,
-        lat,
-        apiKey,
-    )
+    url = f"{APIURL_PLACES}/{lon},{lat}.json?&access_token={apiKey}&country=DE&types=address"
 
     response = requests.get(url)
     json_data = json.loads(response.text)
@@ -108,10 +105,25 @@ def strfdelta(tdelta, fmt):
     return fmt.format(**d)
 
 
-def download_extract_url(url, data_path="/tmp/"):
+@cache.memoize(240)
+def get_radar_data(
+    data_path=CACHE_DIR,
+    base_radar_url=RADAR_URL,
+):
+    """
+    Only update radar data every 5 minutes, although this is not
+    really 100% correct as we should check the remote version
+    TODO We should read the timestamp from the file and compare it with
+    the server
+    """
+    # Remove older files
+    # This should be fine as we're only going into this function if there is new data
+    # to download, so we don't want to keep a copy of the old data
+    for f in glob.glob(f"{data_path}/WN??????????_???"):
+        os.remove(f)
     # Download and extract bz2
-    filename = data_path + os.path.basename(url).replace(".bz2", "")
-    r = requests.get(url, stream=True)
+    filename = data_path + "WN_LATEST.tar"
+    r = requests.get(f"{base_radar_url}/WN_LATEST.tar.bz2", stream=True)
     if r.status_code == requests.codes.ok:
         with r.raw as source, open(filename, "wb") as dest:
             dest.write(bz2.decompress(source.read()))
@@ -122,25 +134,8 @@ def download_extract_url(url, data_path="/tmp/"):
     extracted_files = tar_file.getnames()
     tar_file.extractall(data_path)
     extracted_files = [f"{data_path}{s}" for s in extracted_files]
-
-    return extracted_files
-
-
-@cache.memoize(300)
-def get_radar_data(
-    data_path="/tmp/",
-    base_radar_url="https://opendata.dwd.de/weather/radar/composite/wn/",
-):
-    '''
-    Only update radar data every 5 minutes, although this is not
-    really 100% correct as we should check the remote version
-    We should read the timestamp from the file and compare it with
-    the server
-    '''
-    # Get a list of the files to be downloaded
-    files = "WN_LATEST.tar.bz2"
-
-    extracted_files = download_extract_url(f"{base_radar_url}{files}", data_path)
+    # Remove tar file
+    os.remove(filename)
 
     return process_radar_data(extracted_files)
 
@@ -247,10 +242,10 @@ def subset_radar_data(lon_radar, lat_radar, rr, lons, lats, offset=1):
 
 @cache.memoize(300)
 def filter_radar_cached(lon_bike, lat_bike):
-    '''
+    """
     Get the radar data and subset it so that we only process
     the data on the bike trajectory
-    '''
+    """
     lon_radar, lat_radar, time_radar, dtime_radar, rr = get_radar_data()
     lon_to_plot, lat_to_plot, rain_to_plot = subset_radar_data(
         lon_radar, lat_radar, rr, lon_bike, lat_bike

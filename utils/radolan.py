@@ -20,9 +20,7 @@ Reading RADOLAN data from German Weather Service
 # standard libraries
 # from __future__ import absolute_import
 import datetime as dt
-from io import StringIO  # noqa
 import io
-
 import re
 import warnings
 
@@ -32,14 +30,6 @@ import numpy as np
 # current DWD file naming pattern (2008) for example:
 # raa00-dx_10488-200608050000-drs---bin
 dwdpattern = re.compile("raa..-(..)[_-]([0-9]{5})-([0-9]*)-(.*?)---bin")
-
-
-def _get_timestamp_from_filename(filename):
-    """Helper function doing the actual work of get_dx_timestamp"""
-    time = dwdpattern.search(filename).group(3)
-    if len(time) == 10:
-        time = "20" + time
-    return dt.datetime.strptime(time, "%Y%m%d%H%M")
 
 
 def get_radolan_header_token():

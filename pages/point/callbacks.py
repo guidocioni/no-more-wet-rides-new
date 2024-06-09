@@ -1,4 +1,4 @@
-from dash import Input, Output, callback, State, clientside_callback
+from dash import Input, Output, callback, State, clientside_callback, html, dcc
 from utils.utils import (
     get_place_address_reverse,
     get_place_address,
@@ -115,6 +115,17 @@ def create_figure(data):
 
     else:
         raise PreventUpdate
+
+
+@callback(
+    Output("geo", "children"), Input("geolocate", "n_clicks"), prevent_initial_call=True
+)
+def start_geolocation_section(n):
+    return html.Div(
+        [
+            dcc.Geolocation(id="geolocation"),
+        ]
+    )
 
 
 @callback(
