@@ -96,7 +96,7 @@ def get_place_address(place):
 
 @cache.memoize(900)
 def get_place_address_reverse(lon, lat):
-    url = f"{APIURL_PLACES}/{lon},{lat}.json?&access_token={apiKey}&country=DE&types=address"
+    url = f"{APIURL_PLACES}/{lon},{lat}.json?&access_token={apiKey}&country=DE&limit=1"
 
     response = requests.get(url)
     json_data = json.loads(response.text)

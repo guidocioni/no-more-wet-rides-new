@@ -78,7 +78,7 @@ def create_coords_and_map(n_clicks, point_address):
             return (
                 new_children,
                 {"place_name": place_name, "lon": lon, "lat": lat},
-                dict(center=[lat, lon], zoom=8),
+                dict(center=[lat, lon], zoom=9),
             )
         else:
             raise PreventUpdate
