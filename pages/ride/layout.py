@@ -85,6 +85,7 @@ map_card = dbc.Card(
                     dl.LayerGroup(id="layer"),
                     dl.LayerGroup(id="track-layer"),
                     dl.WMSTileLayer(
+                        id="wms-layer",
                         url="https://maps.dwd.de/geoserver/ows?",
                         layers="dwd:RX-Produkt",
                         format="image/png",

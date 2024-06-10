@@ -54,9 +54,11 @@ def load_addresses_from_cache(app_div, addresses_cache_data):
     Should only load when the application first start and populate
     the text boxes with the addresses that were saved in the cache
     """
-    return addresses_cache_data.get("from_address", ""), addresses_cache_data.get(
-        "to_address", ""
-    )
+    if addresses_cache_data is not None:
+        return addresses_cache_data.get("from_address", ""), addresses_cache_data.get(
+            "to_address", ""
+        )
+    raise PreventUpdate
 
 
 @callback(

@@ -48,7 +48,7 @@ map_card = dbc.Card(
                     ),
                     dl.LayerGroup(id="layer-point"),
                     dl.WMSTileLayer(
-                        id="wms-layer-point",
+                        id="wms-layer",
                         url="https://maps.dwd.de/geoserver/ows?",
                         layers="dwd:RX-Produkt",
                         format="image/png",
@@ -139,7 +139,7 @@ layout = html.Div(
                         dbc.Collapse(
                             dbc.Spinner(fig_card), id="fade-figure-point", is_open=False
                         ),
-                        help_card,
+                        # help_card,
                     ],
                     sm=12,
                     md=12,

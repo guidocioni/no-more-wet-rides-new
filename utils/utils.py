@@ -412,8 +412,8 @@ def make_fig_time(df):
 
         fig.update_layout(
             legend_orientation="h",
-            xaxis=dict(title="Time from departure [min]", rangemode="tozero"),
-            yaxis=dict(title="Precipitation [mm/h]", rangemode="tozero"),
+            xaxis=dict(title="Time from departure [min]", rangemode="tozero", fixedrange=True),
+            yaxis=dict(title="Precipitation [mm/h]", rangemode="tozero", fixedrange=True),
             legend=dict(title=dict(text="leave at "), font=dict(size=10)),
             height=390,
             margin={"r": 0.1, "t": 0.1, "l": 0.1, "b": 0.1},
@@ -449,8 +449,8 @@ def make_fig_bars(df):
 
         fig.update_layout(
             legend_orientation="h",
-            xaxis=dict(title="Leave at.."),
-            yaxis=dict(visible=False),
+            xaxis=dict(title="Leave at..", fixedrange=True),
+            yaxis=dict(visible=False, fixedrange=True),
             showlegend=False,
             height=390,
             margin={"r": 0.1, "t": 0.1, "l": 0.1, "b": 0.1},
@@ -467,8 +467,8 @@ def make_empty_figure(text="No data (yet 😃)"):
     fig.add_annotation(x=2.5, y=1.5, text=text, showarrow=False, font=dict(size=30))
 
     fig.update_layout(
-        xaxis=dict(visible=False),
-        yaxis=dict(visible=False),
+        xaxis=dict(visible=False, fixedrange=True),
+        yaxis=dict(visible=False, fixedrange=True),
         height=390,
         margin={"r": 0.1, "t": 0.1, "l": 0.1, "b": 0.1},
         template="plotly_white",

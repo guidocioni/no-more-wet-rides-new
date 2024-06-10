@@ -47,7 +47,9 @@ def load_address_from_cache(app_div, point_cache_data):
     Should only load when the application first start and populate
     the text boxes with the point that were saved in the cache
     """
-    return point_cache_data.get("point_address", "")
+    if point_cache_data is not None:
+        return point_cache_data.get("point_address", "")
+    raise PreventUpdate
 
 
 @callback(
@@ -105,16 +107,16 @@ def create_figure(data):
         fig.update_layout(
             legend_orientation="h",
             xaxis=dict(title="", rangemode="tozero"),
-            yaxis=dict(title="Precipitation [mm/h]", rangemode="tozero"),
+            yaxis=dict(
+                title="Precipitation [mm/h]", rangemode="tozero", fixedrange=True
+            ),
             height=390,
             margin={"r": 5, "t": 5, "l": 5, "b": 5},
             template="plotly_white",
         )
 
         return fig
-
-    else:
-        raise PreventUpdate
+    raise PreventUpdate
 
 
 @callback(
@@ -225,12 +227,15 @@ clientside_callback(
     prevent_initial_call=True,
 )
 
-# Refresh WMS tiles every minute
-# @callback(
-#     Output("wms-layer-point", "url"),
-#     Input("interval-wms-refresh", "n_intervals"),
-#     prevent_initial_call=True,
-# )
-# def refresh_wms(n_intervals):
-#     if n_intervals > 0:
-#         return f"https://maps.dwd.de/geoserver/ows?cache={int(time.time())}"
+
+@callback(
+    Output("wms-layer", "params"),
+    Input("interval-wms-refresh", "n_intervals"),
+    prevent_initial_call=True,
+)
+def refresh_wms(n_intervals):
+    '''
+    Refresh WMS tiles with interval
+    '''
+    if n_intervals > 0:
+        return dict(cache=int(time.time()))
