@@ -31,14 +31,18 @@ app_url/query?from=Holländische%20Reihe%2015,%20Hamburg&to=Bundesstrasse%2053%2
 ## Installation
 The script should work fine with both Python2 and Python3. You need the following packages
 
-- pandas
-- numpy
-- requests
-- plotly
-- dash 
-- gunicorn
-- flask
-- flask-caching
+- `pandas`
+- `numpy`
+- `requests`
+- `plotly`
+- `dash`
+- `dash-leaflet`
+- `dash-bootstrap-components`
+- `dash-mantine-components`
+- `gunicorn`
+- `flask-caching`
+- `scikit-learn`
+- `simplification`, optional for track simplification
 
 All the other packages should already be installed in your Python distribution. 
 

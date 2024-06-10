@@ -18,32 +18,65 @@ from .settings import (
     RADAR_URL,
     APIURL_PLACES,
     APIURL_DIRECTIONS,
+    logging,
 )
 from .radolan import read_radolan_composite, get_latlon_radar, to_rain_rate
 import tarfile
 
+try:
+    import simplification.cutil as simpl
+    SIMPLIFICATION_AVAILABLE = True
+except ImportError:
+    SIMPLIFICATION_AVAILABLE = False
+
 
 @cache.memoize(900)
-def get_directions(start_point, end_point, mode="cycling"):
+def get_directions(
+    start_point, end_point, mode="cycling", simplify=True, simplify_tolerance=0.0001
+):
     """
     Get directions using mapbox API. Note that this is cached
     so that we already use directions if we already have them.
     """
-    # TODO - Interpolate output to have equally spaced points
     sourcePlace, sourceLon, sourceLat = get_place_address(start_point)
     destPlace, destLon, destLat = get_place_address(end_point)
 
-    url = f"{APIURL_DIRECTIONS}/{mode}/{sourceLon:4.5f},{sourceLat:4.5f};{destLon:4.5f},{destLat:4.5f}?geometries=geojson&annotations=duration,distance&overview=full&access_token={apiKey}"
+    url = f"{APIURL_DIRECTIONS}/{mode}/{sourceLon:4.5f},{sourceLat:4.5f};{destLon:4.5f},{destLat:4.5f}"
+    params = {
+        "geometries": "geojson",
+        "annotations": "duration",  # could also get distance
+        "overview": "full",
+        "access_token": apiKey,
+    }
 
-    response = requests.get(url)
+    response = requests.get(url, params=params)
     json_data = json.loads(response.text)
 
-    steps = np.array(json_data["routes"][0]["geometry"]["coordinates"]).T
+    steps = np.array(json_data["routes"][0]["geometry"]["coordinates"])
+    if simplify:
+        if SIMPLIFICATION_AVAILABLE:
+            subset_idx = simpl.simplify_coords_idx(steps, simplify_tolerance)
+            steps = steps[subset_idx]
+        else:
+            logging.warning(
+                "simplify=True but simplification library is missing, returning original"
+            )
+    steps = steps.T
+
     lons = steps[0]
     lats = steps[1]
     time = json_data["routes"][0]["legs"][0]["annotation"]["duration"]
-    time.insert(0, 0)
-    dtime = np.cumsum(pd.to_timedelta(time, unit="s"))
+    time.insert(0, 0)  # Add start point with 0 timedelta
+    dtime = np.cumsum(
+        pd.to_timedelta(time, unit="s")
+    )  # Make a cumulative sum of duration
+    if simplify:
+        if SIMPLIFICATION_AVAILABLE:
+            dtime = dtime[subset_idx]
+        else:
+            logging.warning(
+                "simplify=True but simplification library is missing, returning original"
+            )
 
     return sourcePlace, destPlace, lons, lats, dtime
 
@@ -313,93 +346,33 @@ def linear_random_increase(x):
     return np.linspace(startpoint, endpoint, len(x))
 
 
-def zoom_center(
-    lons: tuple = None,
-    lats: tuple = None,
-    lonlats: tuple = None,
-    format: str = "lonlat",
-    projection: str = "mercator",
-    width_to_height: float = 2.0,
-):
-    """Finds optimal zoom and centering for a plotly mapbox.
-    Must be passed (lons & lats) or lonlats.
-    Temporary solution awaiting official implementation, see:
-    https://github.com/plotly/plotly.js/issues/3434
+def zoom_center(min_lat, max_lat, min_lon, max_lon, map_width=200, map_height=360):
+    # Define constants
+    TILE_SIZE = 256
+    WORLD_DIM = 256  # World map dimension in tile size units
+    
+    # Calculate the bounds in terms of world coordinates
+    lat_rad_min = np.deg2rad(min_lat)
+    lat_rad_max = np.deg2rad(max_lat)
+        
+    lat_rad_diff = lat_rad_max - lat_rad_min
+    lon_diff = max_lon - min_lon
+    
+    # Calculate the number of world coordinates in each dimension
+    lat_world_units = WORLD_DIM / (2 * np.pi) * lat_rad_diff
+    lon_world_units = WORLD_DIM / 360 * lon_diff
+    
+    # Calculate the scale required for each dimension to fit the map
+    lat_scale = map_height / lat_world_units
+    lon_scale = map_width / lon_world_units
+    
+    # Choose the smaller scale to ensure the whole bounding box fits into the map
+    min_scale = min(lat_scale, lon_scale)
+    
+    # Calculate the zoom level from the scale
+    zoom = np.log2(min_scale * TILE_SIZE / WORLD_DIM)
 
-    Parameters
-    --------
-    lons: tuple, optional, longitude component of each location
-    lats: tuple, optional, latitude component of each location
-    lonlats: tuple, optional, gps locations
-    format: str, specifying the order of longitud and latitude dimensions,
-        expected values: 'lonlat' or 'latlon', only used if passed lonlats
-    projection: str, only accepting 'mercator' at the moment,
-        raises `NotImplementedError` if other is passed
-    width_to_height: float, expected ratio of final graph's with to height,
-        used to select the constrained axis.
-
-    Returns
-    --------
-    zoom: float, from 1 to 20
-    center: dict, gps position with 'lon' and 'lat' keys
-
-    >>> print(zoom_center((-109.031387, -103.385460),
-    ...     (25.587101, 31.784620)))
-    (5.75, {'lon': -106.208423, 'lat': 28.685861})
-
-    See https://stackoverflow.com/questions/63787612/plotly-automatic-zooming-for-mapbox-maps
-    """
-    if lons is None and lats is None:
-        if isinstance(lonlats, tuple):
-            lons, lats = zip(*lonlats)
-        else:
-            raise ValueError("Must pass lons & lats or lonlats")
-
-    maxlon, minlon = max(lons), min(lons)
-    maxlat, minlat = max(lats), min(lats)
-    center = {
-        "lon": round((maxlon + minlon) / 2, 6),
-        "lat": round((maxlat + minlat) / 2, 6),
-    }
-
-    # longitudinal range by zoom level (20 to 1)
-    # in degrees, if centered at equator
-    lon_zoom_range = np.array(
-        [
-            0.0007,
-            0.0014,
-            0.003,
-            0.006,
-            0.012,
-            0.024,
-            0.048,
-            0.096,
-            0.192,
-            0.3712,
-            0.768,
-            1.536,
-            3.072,
-            6.144,
-            11.8784,
-            23.7568,
-            47.5136,
-            98.304,
-            190.0544,
-            360.0,
-        ]
-    )
-
-    if projection == "mercator":
-        margin = 1.2
-        height = (maxlat - minlat) * margin * width_to_height
-        width = (maxlon - minlon) * margin
-        lon_zoom = np.interp(width, lon_zoom_range, range(20, 0, -1))
-        lat_zoom = np.interp(height, lon_zoom_range, range(20, 0, -1))
-        zoom = round(min(lon_zoom, lat_zoom), 2)
-    else:
-        raise NotImplementedError("projection is not implemented")
-
-    return zoom, center
+    return min(zoom, 22), {'lat': (min_lat + max_lat) / 2, 'lon': (min_lon + max_lon) / 2}
 
 
 def make_fig_time(df):
@@ -412,8 +385,12 @@ def make_fig_time(df):
 
         fig.update_layout(
             legend_orientation="h",
-            xaxis=dict(title="Time from departure [min]", rangemode="tozero", fixedrange=True),
-            yaxis=dict(title="Precipitation [mm/h]", rangemode="tozero", fixedrange=True),
+            xaxis=dict(
+                title="Time from departure [min]", rangemode="tozero", fixedrange=True
+            ),
+            yaxis=dict(
+                title="Precipitation [mm/h]", rangemode="tozero", fixedrange=True
+            ),
             legend=dict(title=dict(text="leave at "), font=dict(size=10)),
             height=390,
             margin={"r": 0.1, "t": 0.1, "l": 0.1, "b": 0.1},

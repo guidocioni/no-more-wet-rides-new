@@ -1,5 +1,12 @@
 from flask_caching import Cache
 import os
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s %(levelname)s %(module)s - %(funcName)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+)
 
 URL_BASE_PATHNAME = "/nmwr/"
 CACHE_DIR = '/var/cache/nmwr/'

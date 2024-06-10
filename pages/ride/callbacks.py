@@ -136,7 +136,7 @@ def create_coords_and_map(n_clicks, from_address, to_address, mode):
                 dl.Marker(position=trajectory[0], children=dl.Tooltip(start_point)),
                 dl.Marker(position=trajectory[-1], children=dl.Tooltip(end_point)),
             ]
-            zoom, center = zoom_center(lons, lats, width_to_height=8)
+            zoom, center = zoom_center(lats.min(), lats.max(), lons.min(), lons.max(), 200)
             return (
                 new_children,
                 df.to_json(date_format="iso", orient="split"),
