@@ -80,20 +80,49 @@ map_card = dbc.Card(
             dl.Map(
                 children=[
                     dl.FullScreenControl(),
-                    dl.TileLayer(
-                        url=mapURL, attribution=attribution, tileSize=512, zoomOffset=-1
-                    ),
                     dl.LayerGroup(id="layer"),
                     dl.LayerGroup(id="track-layer"),
-                    dl.WMSTileLayer(
-                        id="wms-layer",
-                        url="https://maps.dwd.de/geoserver/ows?",
-                        layers="dwd:RX-Produkt",
-                        format="image/png",
-                        transparent=True,
-                        opacity=0.7,
-                        version="1.3.0",
-                        detectRetina=True,
+                    dl.LayersControl(
+                        [
+                            dl.BaseLayer(
+                                name="Map",
+                                checked=True,
+                                children=dl.TileLayer(
+                                    url=mapURL,
+                                    attribution=attribution,
+                                    tileSize=512,
+                                    zoomOffset=-1,
+                                ),
+                            ),
+                            dl.Overlay(
+                                name="Satellite",
+                                checked=False,
+                                children=dl.WMSTileLayer(
+                                    id="wms-layer-sat",
+                                    url="https://maps.dwd.de/geoserver/ows?",
+                                    layers="dwd:Satellite_meteosat_1km_euat_rgb_day_hrv_and_night_ir108_3h",
+                                    format="image/png",
+                                    transparent=True,
+                                    opacity=0.7,
+                                    version="1.3.0",
+                                    detectRetina=True,
+                                ),
+                            ),
+                            dl.Overlay(
+                                name="Radar",
+                                checked=True,
+                                children=dl.WMSTileLayer(
+                                    id="wms-layer",
+                                    url="https://maps.dwd.de/geoserver/ows?",
+                                    layers="dwd:RX-Produkt",
+                                    format="image/png",
+                                    transparent=True,
+                                    opacity=0.7,
+                                    version="1.3.0",
+                                    detectRetina=True,
+                                ),
+                            ),
+                        ]
                     ),
                 ],
                 center=[51.326863, 10.354922],
