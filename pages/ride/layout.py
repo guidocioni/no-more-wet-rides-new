@@ -79,6 +79,7 @@ map_card = dbc.Card(
         children=[
             dl.Map(
                 children=[
+                    dl.FullScreenControl(),
                     dl.TileLayer(
                         url=mapURL, attribution=attribution, tileSize=512, zoomOffset=-1
                     ),
@@ -103,8 +104,8 @@ map_card = dbc.Card(
                     "margin": "auto",
                     "display": "block",
                 },
-                touchZoom=False,
-                dragging=False,
+                touchZoom=True,
+                dragging=True,
                 scrollWheelZoom=True,
                 id="map",
             )
