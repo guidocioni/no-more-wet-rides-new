@@ -11,6 +11,7 @@ from dash import (
     MATCH,
     ALL,
     Dash,
+    page_registry
 )
 from utils.settings import cache, URL_BASE_PATHNAME
 from components import navbar, footer
@@ -129,6 +130,43 @@ def update_now(click):
     Force a request for geolocate
     """
     return True if click and click > 0 else False
+
+
+@callback(
+    [
+        Output(
+            {"type": "navbar-link", "index": page["relative_path"].split("/")[-1]},
+            "active",
+        )
+        for page in page_registry.values()
+    ],
+    [Input("url", "pathname")],
+)
+def update_navbar_links(pathname):
+    """
+    Update the "active" property of the Navbar items to highlight which
+    element is active
+    """
+    return [pathname == page["relative_path"] for page in page_registry.values()]
+
+page_titles = {
+    page["relative_path"]: page["title"] for page in page_registry.values()
+}
+
+
+@callback(Output("navbar-title-for-mobile", "children"),
+          [Input("url", "pathname"),
+           Input("navbar-collapse", "is_open")]
+          )
+def update_navbar_title(pathname, is_open):
+    '''
+    Update the navbar title (only on mobile) with the page title every time 
+    the page is changed. Also check if navbar is collapsed
+    '''
+    if not is_open:
+        return page_titles.get(pathname, "")
+    else:
+        return ""
 
 
 # @server.route("/nmwr/query", methods=["GET", "POST"])

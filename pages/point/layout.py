@@ -4,7 +4,7 @@ from utils.settings import mapURL, attribution
 from .callbacks import *
 import dash_leaflet as dl
 
-register_page(__name__, path="/point", title="Point forecast")
+register_page(__name__, path="/point", title="Point")
 
 controls = dbc.Card(
     [

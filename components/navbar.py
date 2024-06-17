@@ -15,18 +15,11 @@ def navbar():
     return dbc.Navbar(
         dbc.Container(
             [
-                html.A(
-                    # Use row and col to control vertical alignment of logo / brand
-                    dbc.Row(
-                        [
-                            # dbc.Col(html.Img(src=LOGO, height="30px")),
-                            dbc.Col(
-                                dbc.NavbarBrand("No More Wet Rides", className="ms-2")
-                            ),
-                        ],
-                        align="center",
-                        className="g-0",
-                    ),
+                dbc.NavbarBrand('NoMoreWetRides 🚴', class_name='fs-4'),
+                html.Div(
+                    id='navbar-title-for-mobile',
+                    className='d-md-none fs-6',  # Show only on mobile devices
+                    style={'color': 'white'}
                 ),
                 dbc.NavbarToggler(id="navbar-toggler", n_clicks=0),
                 dbc.Collapse(
@@ -44,7 +37,7 @@ def navbar():
                             )
                             for page in page_registry.values()
                         ],
-                        navbar=True,
+                        pills=True,
                     ),
                     id="navbar-collapse",
                     navbar=True,
