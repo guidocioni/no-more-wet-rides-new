@@ -1,4 +1,4 @@
-from dash import Input, Output, callback, State, clientside_callback, html, dcc
+from dash import Input, Output, callback, State, clientside_callback
 from utils.utils import (
     get_place_address_reverse,
     get_place_address,
@@ -6,11 +6,12 @@ from utils.utils import (
     distance_km,
     to_rain_rate,
 )
+from utils.openmeteo_api import get_forecast_data
 from dash.exceptions import PreventUpdate
 import numpy as np
 import dash_leaflet as dl
 import plotly.graph_objects as go
-import time
+import pandas as pd
 
 
 @callback(
@@ -83,11 +84,29 @@ def create_figure(data):
         dist = distance_km(lon_radar, data["lon"], lat_radar, data["lat"])
         min_indices = np.unravel_index(dist.argmin(), dist.shape)
         rain_time = to_rain_rate(rr[:, min_indices[0], min_indices[1]])
+        # Get forecast data as well
+        forecast = get_forecast_data(latitude=data["lat"],
+                                     longitude=data["lon"],
+                                     from_time=time_radar.min() - pd.to_timedelta('10 min'),
+                                     to_time=time_radar.max() + pd.to_timedelta('2h'))
 
         fig = go.Figure(
-            data=go.Scatter(
-                x=time_radar, y=rain_time, mode="markers+lines", fill="tozeroy"
-            )
+            data=[
+                go.Scatter(
+                    x=time_radar,
+                    y=rain_time,
+                    mode="markers+lines",
+                    fill="tozeroy",
+                    name="radar forecast",
+                ),
+                go.Scatter(
+                    x=forecast["time"],
+                    y=forecast["precipitation"],
+                    mode="markers+lines",
+                    fill="tozeroy",
+                    name="model forecast",
+                ),
+            ]
         )
 
         fig.update_layout(
@@ -112,7 +131,10 @@ def create_figure(data):
         Output("map-point", "viewport", allow_duplicate=True),
     ],
     Input("geolocation", "local_date"),  # need it just to force an update!
-    [State("geolocation", "position"), State({'type':'geolocate', 'index':'point'}, "n_clicks")],
+    [
+        State("geolocation", "position"),
+        State({"type": "geolocate", "index": "point"}, "n_clicks"),
+    ],
     prevent_initial_call=True,
 )
 def update_location(_, pos, n_clicks):
