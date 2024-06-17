@@ -18,20 +18,6 @@ import io
 
 
 @callback(
-    Output("fade-figure", "is_open"),
-    [Input("generate-button", "n_clicks")],
-)
-def toggle_fade(n):
-    """
-    Hide the plots until the button hasn't been clicked
-    """
-    if not n:
-        # Button has never been clicked
-        return False
-    return True
-
-
-@callback(
     Output("addresses-cache", "data"),
     [Input("from_address", "value"), Input("to_address", "value")],
     prevent_initial_call=True,
@@ -49,7 +35,7 @@ def save_addresses_into_cache(from_address, to_address):
     Input("url", "pathname"),
     State("addresses-cache", "data"),
 )
-def load_addresses_from_cache(app_div, addresses_cache_data):
+def load_addresses_from_cache(_, addresses_cache_data):
     """
     Should only load when the application first start and populate
     the text boxes with the addresses that were saved in the cache
@@ -81,23 +67,12 @@ def switch_addresses(click, from_address, to_address):
 
 
 @callback(
-    Output("geolocation", "update_now"),
-    Input("geolocate", "n_clicks"),
-)
-def update_now(click):
-    """
-    Force a request for geolocate
-    """
-    return True if click and click > 0 else False
-
-
-@callback(
     [
         Output("track-layer", "children"),
         Output("intermediate-value", "data"),
         Output("map", "viewport"),
     ],
-    [Input("generate-button", "n_clicks")],
+    Input({"type": "generate-button", "index": "ride"}, "n_clicks"),
     [
         State("from_address", "value"),
         State("to_address", "value"),
@@ -136,7 +111,9 @@ def create_coords_and_map(n_clicks, from_address, to_address, mode):
                 dl.Marker(position=trajectory[0], children=dl.Tooltip(start_point)),
                 dl.Marker(position=trajectory[-1], children=dl.Tooltip(end_point)),
             ]
-            zoom, center = zoom_center(lats.min(), lats.max(), lons.min(), lons.max(), 200)
+            zoom, center = zoom_center(
+                lats.min(), lats.max(), lons.min(), lons.max(), 200
+            )
             return (
                 new_children,
                 df.to_json(date_format="iso", orient="split"),
@@ -201,7 +178,7 @@ def show_long_ride_warning(data):
         Input("geolocation", "local_date"),  # need it just to force an update!
         Input("geolocation", "position"),
     ],
-    State("geolocate", "n_clicks"),
+    State({'type':'geolocate', 'index':'ride'}, "n_clicks"),
     prevent_initial_call=True,
 )
 def update_location(_, pos, n_clicks):

@@ -21,7 +21,7 @@ controls = dbc.Card(
                         persistence=True,
                     ),
                     dbc.Button(
-                        id="geolocate",
+                        id={'type':'geolocate', 'index':'ride'},
                         className="fa-solid fa-location-dot col-2",
                         color="secondary",
                         outline=False,
@@ -67,7 +67,9 @@ controls = dbc.Card(
             ],
             className="mb-3 col-12",
         ),
-        dbc.Button("Generate", id="generate-button", className="mr-2 col-12"),
+        dbc.Button("Generate",
+                   id={'type': 'generate-button', 'index': 'ride'},
+                   className="mr-2 col-12"),
     ],
     body=True,
     className="mb-2",
@@ -239,7 +241,9 @@ layout = html.Div(
                 dbc.Col(
                     [
                         dbc.Collapse(
-                            dbc.Spinner(fig_card), id="fade-figure", is_open=False
+                            dbc.Spinner(fig_card),
+                            id={'type':'fade', 'index':'ride'},
+                            is_open=False
                         ),
                         help_card,
                     ],

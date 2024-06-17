@@ -1,10 +1,21 @@
-import dash
+import time
 import dash_bootstrap_components as dbc
-from dash import dcc, html, page_container, Input, Output, clientside_callback
+from dash import (
+    dcc,
+    html,
+    page_container,
+    Input,
+    Output,
+    clientside_callback,
+    callback,
+    MATCH,
+    ALL,
+    Dash,
+)
 from utils.settings import cache, URL_BASE_PATHNAME
 from components import navbar, footer
 
-app = dash.Dash(
+app = Dash(
     __name__,
     use_pages=True,
     external_stylesheets=[dbc.themes.FLATLY, dbc.icons.FONT_AWESOME],
@@ -63,6 +74,62 @@ clientside_callback(
     Output("back-to-top-button", "id"),
     Input("back-to-top-button", "id"),
 )
+
+
+@callback(
+    Output(
+        {"type": "fade", "index": MATCH},
+        "is_open",
+    ),
+    Input({"type": "generate-button", "index": MATCH}, "n_clicks"),
+    prevent_initial_call=True,
+)
+def toggle_fade(n):
+    """
+    Open the collapse element containing the plots once
+    the submit button has been pressed (on all pages)
+    """
+    if not n:
+        # Button has never been clicked
+        return False
+    return True
+
+
+@callback(
+    Output("wms-layer", "params"),
+    Input("interval-wms-refresh", "n_intervals"),
+    prevent_initial_call=True,
+)
+def refresh_wms(n_intervals):
+    """
+    Refresh WMS tiles with interval
+    """
+    if n_intervals > 0:
+        return dict(cache=int(time.time()))
+
+
+@callback(
+    Output("geo", "children"), Input({'type':'geolocate', 'index': ALL}, "n_clicks"), prevent_initial_call=True
+)
+def start_geolocation_section(n):
+    return html.Div(
+        [
+            dcc.Geolocation(id="geolocation", high_accuracy=True),
+        ]
+    )
+
+
+@callback(
+    Output("geolocation", "update_now", allow_duplicate=True),
+    Input({'type':'geolocate', 'index': ALL}, "n_clicks"),
+    prevent_initial_call=True,
+)
+def update_now(click):
+    """
+    Force a request for geolocate
+    """
+    return True if click and click > 0 else False
+
 
 # @server.route("/nmwr/query", methods=["GET", "POST"])
 # def query():

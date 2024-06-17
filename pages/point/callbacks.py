@@ -14,20 +14,6 @@ import time
 
 
 @callback(
-    Output("fade-figure-point", "is_open"),
-    [Input("generate-button-point", "n_clicks")],
-)
-def toggle_fade(n):
-    """
-    Hide the plots until the button hasn't been clicked
-    """
-    if not n:
-        # Button has never been clicked
-        return False
-    return True
-
-
-@callback(
     Output("point-cache", "data"),
     Input("point_address", "value"),
     prevent_initial_call=True,
@@ -58,7 +44,7 @@ def load_address_from_cache(app_div, point_cache_data):
         Output("intermediate-value-point", "data"),
         Output("map-point", "viewport"),
     ],
-    Input("generate-button-point", "n_clicks"),
+    Input({"type": "generate-button", "index": "point"}, "n_clicks"),
     State("point_address", "value"),
 )
 def create_coords_and_map(n_clicks, point_address):
@@ -120,36 +106,13 @@ def create_figure(data):
 
 
 @callback(
-    Output("geo", "children"), Input("geolocate", "n_clicks"), prevent_initial_call=True
-)
-def start_geolocation_section(n):
-    return html.Div(
-        [
-            dcc.Geolocation(id="geolocation"),
-        ]
-    )
-
-
-@callback(
-    Output("geolocation", "update_now", allow_duplicate=True),
-    Input("geolocate", "n_clicks"),
-    prevent_initial_call=True,
-)
-def update_now(click):
-    """
-    Force a request for geolocate
-    """
-    return True if click and click > 0 else False
-
-
-@callback(
     [
         Output("point_address", "value", allow_duplicate=True),
         Output("layer-point", "children", allow_duplicate=True),
         Output("map-point", "viewport", allow_duplicate=True),
     ],
     Input("geolocation", "local_date"),  # need it just to force an update!
-    [State("geolocation", "position"), State("geolocate", "n_clicks")],
+    [State("geolocation", "position"), State({'type':'geolocate', 'index':'point'}, "n_clicks")],
     prevent_initial_call=True,
 )
 def update_location(_, pos, n_clicks):
@@ -226,16 +189,3 @@ clientside_callback(
     [State("time-plot-point", "id")],
     prevent_initial_call=True,
 )
-
-
-@callback(
-    Output("wms-layer", "params"),
-    Input("interval-wms-refresh", "n_intervals"),
-    prevent_initial_call=True,
-)
-def refresh_wms(n_intervals):
-    '''
-    Refresh WMS tiles with interval
-    '''
-    if n_intervals > 0:
-        return dict(cache=int(time.time()))
