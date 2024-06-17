@@ -1,3 +1,11 @@
 .nav-pills .nav-link.active {
     color: #fff;
   }
+
+.Select.is-open {
+    z-index: 1003;
+}
+
+.VirtualizedSelectOption {
+  white-space: nowrap; overflow: auto; text-overflow: ellipsis;
+}

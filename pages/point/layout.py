@@ -9,31 +9,31 @@ register_page(__name__, path="/point", title="Point")
 controls = dbc.Card(
     [
         html.Div(id="geo"),
-        dbc.Spinner(
-            dbc.InputGroup(
-                [
-                    dbc.InputGroupText("Where?"),
-                    dbc.Input(
-                        placeholder="type address or geolocate",
+        dbc.InputGroup(
+            [
+                html.Div(
+                    dcc.Dropdown(
+                        multi=False,
                         id="point_address",
-                        type="text",
-                        autocomplete="street-address",
-                        persistence=True,
+                        style={"fontSize": "15px"},
+                        # optionHeight=50
                     ),
-                    dbc.Button(
-                        id={'type':'geolocate', 'index':'point'},
-                        className="fa-solid fa-location-dot col-2",
-                        color="secondary",
-                        outline=False,
-                    ),
-                ],
-                className="mb-2 col-12",
-            ),
-            type="grow",
+                    className="col-10",
+                ),
+                dbc.Button(
+                    id={"type": "geolocate", "index": "point"},
+                    className="fa-solid fa-location-dot col-2",
+                    color="secondary",
+                    outline=False,
+                ),
+            ],
+            className="mb-2 col-12 row g-0",
         ),
-        dbc.Button("Generate",
-                   id={'type': 'generate-button', 'index': 'point'},
-                   className="mr-2 col-12"),
+        dbc.Button(
+            "Generate",
+            id={"type": "generate-button", "index": "point"},
+            className="mr-2 col-12",
+        ),
     ],
     body=True,
     className="mb-2",
@@ -170,8 +170,8 @@ layout = html.Div(
                     [
                         dbc.Collapse(
                             dbc.Spinner(fig_card),
-                            id={'type':'fade', 'index':'point'},
-                            is_open=False
+                            id={"type": "fade", "index": "point"},
+                            is_open=False,
                         ),
                         # help_card,
                     ],

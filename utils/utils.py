@@ -38,8 +38,10 @@ def get_directions(
     Get directions using mapbox API. Note that this is cached
     so that we already use directions if we already have them.
     """
-    sourcePlace, sourceLon, sourceLat = get_place_address(start_point)
-    destPlace, destLon, destLat = get_place_address(end_point)
+    sourcePlace, sourceCenter = get_place_address(start_point, limit=1)
+    destPlace, destCenter = get_place_address(end_point, limit=1)
+    sourceLon, sourceLat = sourceCenter
+    destLon, destLat = destCenter
 
     url = f"{APIURL_DIRECTIONS}/{mode}/{sourceLon:4.5f},{sourceLat:4.5f};{destLon:4.5f},{destLat:4.5f}"
     params = {
@@ -82,23 +84,45 @@ def get_directions(
 
 
 @cache.memoize(900)
-def get_place_address(place):
-    url = f"{APIURL_PLACES}/{place}.json?&access_token={apiKey}&country=DE"
+def get_place_address(place, country='de', limit=5, language='de'):
+    url = f"{APIURL_PLACES}/{place}.json"
 
-    response = requests.get(url)
+    payload = {
+        'country': country,
+        'access_token': apiKey,
+        'language': language,
+        'limit': limit
+    }
+
+    response = requests.get(url, params=payload)
     json_data = json.loads(response.text)
 
-    place_name = json_data["features"][0]["place_name"]
-    lon, lat = json_data["features"][0]["center"]
+    if len(json_data['features']) == 0:
+        return None
 
-    return place_name, lon, lat
+    place_name = [f['place_name'] for f in json_data["features"]]
+    place_center = [f['center'] for f in json_data["features"]]
+
+    if len(place_name) == 1:
+        place_name = place_name[0]
+    if len(place_center) == 1:
+        place_center = place_center[0]
+
+    return place_name, place_center
 
 
 @cache.memoize(900)
-def get_place_address_reverse(lon, lat):
-    url = f"{APIURL_PLACES}/{lon},{lat}.json?&access_token={apiKey}&country=DE&limit=1"
+def get_place_address_reverse(lon, lat, country='de', limit=1, language='de'):
+    url = f"{APIURL_PLACES}/{lon},{lat}.json"
 
-    response = requests.get(url)
+    payload = {
+        'country': country,
+        'access_token': apiKey,
+        'language': language,
+        'limit': limit
+    }
+
+    response = requests.get(url, params=payload)
     json_data = json.loads(response.text)
 
     place_name = json_data["features"][0]["place_name"]

@@ -47,6 +47,7 @@ def serve_layout():
             dcc.Store(id="garbage"),
             dcc.Store(id="addresses-cache", storage_type="local"),
             dcc.Store(id="point-cache", storage_type="local"),
+            dcc.Store(id="addresses-autocomplete-point", storage_type="local"),
             dcc.Interval(
                 id="interval-wms-refresh", interval=60000, n_intervals=0
             ),  # 60 seconds

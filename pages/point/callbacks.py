@@ -1,10 +1,11 @@
-from dash import Input, Output, callback, State, clientside_callback
+from dash import Input, Output, callback, State, clientside_callback, html
 from utils.utils import (
     get_place_address_reverse,
     get_place_address,
     get_radar_data,
     distance_km,
     to_rain_rate,
+    get_place_address
 )
 from utils.openmeteo_api import get_forecast_data
 from dash.exceptions import PreventUpdate
@@ -15,27 +16,52 @@ import pandas as pd
 
 
 @callback(
-    Output("point-cache", "data"),
-    Input("point_address", "value"),
+    Output("point_address", "options", allow_duplicate=True),
+    Input("point_address", "search_value"),
     prevent_initial_call=True,
 )
-def save_address_into_cache(point_address):
-    # We don't check anything on the input because we want to save them regardless
-    return {"point_address": point_address}
+def suggest_locs_dropdown(value):
+    """
+    When the user types, update the dropdown with locations
+    found with the API
+    """
+    if value is None or len(value) < 4:
+        raise PreventUpdate
+    locations_names, _ = get_place_address(value, limit=5) # Get up to a maximum of 5 options
+    if len(locations_names) == 0:
+        raise PreventUpdate
+    
+    options = [{'label':name, 'value':name} for name in locations_names]
+
+    return options
 
 
 @callback(
-    Output("point_address", "value"),
-    Input("url", "pathname"),
-    State("point-cache", "data"),
+    [Output("point-cache", "data"),
+     Output("addresses-autocomplete-point", "data")],
+    [Input("point_address", "value"),
+     Input("point_address", "options")],
+    prevent_initial_call=True,
 )
-def load_address_from_cache(app_div, point_cache_data):
+def save_address_into_cache(point_address, point_addresses):
+    # We don't check anything on the input because we want to save them regardless
+    return {"point_address": point_address}, point_addresses
+
+
+@callback(
+    [Output("point_address", "value"),
+     Output("point_address", "options")],
+    Input("url", "pathname"),
+    [State("point-cache", "data"),
+     State("addresses-autocomplete-point", "data")]
+)
+def load_address_from_cache(_, point_cache_data, options_cache_data):
     """
     Should only load when the application first start and populate
     the text boxes with the point that were saved in the cache
     """
-    if point_cache_data is not None:
-        return point_cache_data.get("point_address", "")
+    if point_cache_data is not None and options_cache_data is not None:
+        return point_cache_data.get("point_address", ""), options_cache_data
     raise PreventUpdate
 
 
@@ -50,15 +76,15 @@ def load_address_from_cache(app_div, point_cache_data):
 )
 def create_coords_and_map(n_clicks, point_address):
     """
-    Given the from and to address find directions using
-    the right transportation method, and create the map with the path on
-    it.
+    When the button is pressed put marker on the map and save data
+    into cache to start the computation
     """
     if n_clicks is None:
         raise PreventUpdate
     else:
         if point_address is not None:
-            place_name, lon, lat = get_place_address(point_address)
+            place_name, place_center = get_place_address(point_address, limit=1)
+            lon, lat = place_center
             new_children = [
                 dl.Marker(position=[lat, lon], children=dl.Tooltip(place_name)),
             ]
@@ -127,6 +153,7 @@ def create_figure(data):
 @callback(
     [
         Output("point_address", "value", allow_duplicate=True),
+        Output("point_address", "options", allow_duplicate=True),
         Output("layer-point", "children", allow_duplicate=True),
         Output("map-point", "viewport", allow_duplicate=True),
     ],
@@ -146,6 +173,7 @@ def update_location(_, pos, n_clicks):
         address = get_place_address_reverse(pos["lon"], pos["lat"])
         return (
             address,
+            [{'value': address, 'label': address}],
             [
                 dl.Marker(
                     position=[pos["lat"], pos["lon"]], children=dl.Tooltip(address)
@@ -160,6 +188,7 @@ def update_location(_, pos, n_clicks):
     [
         Output("layer-point", "children", allow_duplicate=True),
         Output("point_address", "value", allow_duplicate=True),
+        Output("point_address", "options", allow_duplicate=True),
     ],
     Input("map-point", "clickData"),
     prevent_initial_call=True,
@@ -169,7 +198,8 @@ def map_click(clickData):
         lat = clickData["latlng"]["lat"]
         lon = clickData["latlng"]["lng"]
         address = get_place_address_reverse(lon, lat)
-        return [dl.Marker(position=[lat, lon], children=dl.Tooltip(address))], address
+        return [dl.Marker(position=[lat, lon], children=dl.Tooltip(address))], address, [{'value': address, 'label': address}]
+
     raise PreventUpdate
 
 
