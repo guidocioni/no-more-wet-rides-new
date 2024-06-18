@@ -21,7 +21,7 @@ controls = dbc.Card(
                         persistence=True,
                     ),
                     dbc.Button(
-                        id={'type':'geolocate', 'index':'ride'},
+                        id={"type": "geolocate", "index": "ride"},
                         className="fa-solid fa-location-dot col-2",
                         color="secondary",
                         outline=False,
@@ -67,9 +67,11 @@ controls = dbc.Card(
             ],
             className="mb-3 col-12",
         ),
-        dbc.Button("Generate",
-                   id={'type': 'generate-button', 'index': 'ride'},
-                   className="mr-2 col-12"),
+        dbc.Button(
+            "Generate",
+            id={"type": "generate-button", "index": "ride"},
+            className="mr-2 col-12",
+        ),
     ],
     body=True,
     className="mb-2",
@@ -145,7 +147,7 @@ map_card = dbc.Card(
     className="mb-2",
 )
 
-fig_card = dbc.Card(
+fig_card = html.Div(
     [
         dbc.Checklist(
             options=[
@@ -242,8 +244,8 @@ layout = html.Div(
                     [
                         dbc.Collapse(
                             dbc.Spinner(fig_card),
-                            id={'type':'fade', 'index':'ride'},
-                            is_open=False
+                            id={"type": "fade", "index": "ride"},
+                            is_open=False,
                         ),
                         help_card,
                     ],

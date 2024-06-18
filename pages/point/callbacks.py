@@ -1,11 +1,10 @@
-from dash import Input, Output, callback, State, clientside_callback, html
+from dash import Input, Output, callback, State, clientside_callback
 from utils.utils import (
     get_place_address_reverse,
     get_place_address,
     get_radar_data,
     distance_km,
     to_rain_rate,
-    get_place_address
 )
 from utils.openmeteo_api import get_forecast_data
 from dash.exceptions import PreventUpdate
@@ -27,20 +26,20 @@ def suggest_locs_dropdown(value):
     """
     if value is None or len(value) < 4:
         raise PreventUpdate
-    locations_names, _ = get_place_address(value, limit=5) # Get up to a maximum of 5 options
+    locations_names, _ = get_place_address(
+        value, limit=5
+    )  # Get up to a maximum of 5 options
     if len(locations_names) == 0:
         raise PreventUpdate
-    
-    options = [{'label':name, 'value':name} for name in locations_names]
+
+    options = [{"label": name, "value": name} for name in locations_names]
 
     return options
 
 
 @callback(
-    [Output("point-cache", "data"),
-     Output("addresses-autocomplete-point", "data")],
-    [Input("point_address", "value"),
-     Input("point_address", "options")],
+    [Output("point-cache", "data"), Output("addresses-autocomplete-point", "data")],
+    [Input("point_address", "value"), Input("point_address", "options")],
     prevent_initial_call=True,
 )
 def save_address_into_cache(point_address, point_addresses):
@@ -49,11 +48,9 @@ def save_address_into_cache(point_address, point_addresses):
 
 
 @callback(
-    [Output("point_address", "value"),
-     Output("point_address", "options")],
+    [Output("point_address", "value"), Output("point_address", "options")],
     Input("url", "pathname"),
-    [State("point-cache", "data"),
-     State("addresses-autocomplete-point", "data")]
+    [State("point-cache", "data"), State("addresses-autocomplete-point", "data")],
 )
 def load_address_from_cache(_, point_cache_data, options_cache_data):
     """
@@ -111,10 +108,12 @@ def create_figure(data):
         min_indices = np.unravel_index(dist.argmin(), dist.shape)
         rain_time = to_rain_rate(rr[:, min_indices[0], min_indices[1]])
         # Get forecast data as well
-        forecast = get_forecast_data(latitude=data["lat"],
-                                     longitude=data["lon"],
-                                     from_time=time_radar.min() - pd.to_timedelta('10 min'),
-                                     to_time=time_radar.max() + pd.to_timedelta('2h'))
+        forecast = get_forecast_data(
+            latitude=data["lat"],
+            longitude=data["lon"],
+            from_time=time_radar.min() - pd.to_timedelta("10 min"),
+            to_time=time_radar.max() + pd.to_timedelta("2h"),
+        )
         # Convert value from mm / 15 min to mm / h
         forecast["precipitation"] = forecast["precipitation"] * 4
 
@@ -143,9 +142,12 @@ def create_figure(data):
             yaxis=dict(
                 title="Precipitation [mm/h]", rangemode="tozero", fixedrange=True
             ),
-            height=390,
-            margin={"r": 5, "t": 5, "l": 5, "b": 5},
+            # height=390,
+            margin={"r": 5, "t": 5, "l": 5, "b": 0},
             template="plotly_white",
+            legend=dict(
+                orientation="h", yanchor="top", y=0.99, xanchor="right", x=0.99
+            ),
         )
 
         return fig
@@ -175,7 +177,7 @@ def update_location(_, pos, n_clicks):
         address = get_place_address_reverse(pos["lon"], pos["lat"])
         return (
             address,
-            [{'value': address, 'label': address}],
+            [{"value": address, "label": address}],
             [
                 dl.Marker(
                     position=[pos["lat"], pos["lon"]], children=dl.Tooltip(address)
@@ -200,7 +202,11 @@ def map_click(clickData):
         lat = clickData["latlng"]["lat"]
         lon = clickData["latlng"]["lng"]
         address = get_place_address_reverse(lon, lat)
-        return [dl.Marker(position=[lat, lon], children=dl.Tooltip(address))], address, [{'value': address, 'label': address}]
+        return (
+            [dl.Marker(position=[lat, lon], children=dl.Tooltip(address))],
+            address,
+            [{"value": address, "label": address}],
+        )
 
     raise PreventUpdate
 

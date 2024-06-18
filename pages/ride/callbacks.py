@@ -178,7 +178,7 @@ def show_long_ride_warning(data):
         Input("geolocation", "local_date"),  # need it just to force an update!
         Input("geolocation", "position"),
     ],
-    State({'type':'geolocate', 'index':'ride'}, "n_clicks"),
+    State({"type": "geolocate", "index": "ride"}, "n_clicks"),
     prevent_initial_call=True,
 )
 def update_location(_, pos, n_clicks):

@@ -108,29 +108,25 @@ map_card = dbc.Card(
     className="mb-2",
 )
 
-fig_card = dbc.Card(
-    [
-        dcc.Graph(
-            id="time-plot-point",
-            config={
-                "modeBarButtonsToRemove": [
-                    "select",
-                    "lasso2d",
-                    "zoomIn",
-                    "zoomOut",
-                    "resetScale",
-                    "autoScale",
-                    "pan2d",
-                    "toImage",
-                    "zoom2d",
-                ],
-                "displaylogo": False,
-            },
-        ),
-    ],
-    className="mb-2",
+fig_card = (
+    dcc.Graph(
+        id="time-plot-point",
+        config={
+            "modeBarButtonsToRemove": [
+                "select",
+                "lasso2d",
+                "zoomIn",
+                "zoomOut",
+                "resetScale",
+                "autoScale",
+                "pan2d",
+                "toImage",
+                "zoom2d",
+            ],
+            "displaylogo": False,
+        },
+    ),
 )
-
 
 help_card = dbc.Accordion(
     [
