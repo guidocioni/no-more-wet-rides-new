@@ -9,25 +9,17 @@ register_page(__name__, path="/point", title="Point")
 controls = dbc.Card(
     [
         html.Div(id="geo"),
-        dbc.InputGroup(
-            [
-                html.Div(
-                    dcc.Dropdown(
-                        multi=False,
-                        id="point_address",
-                        style={"fontSize": "15px"},
-                        # optionHeight=50
-                    ),
-                    className="col-10",
-                ),
-                dbc.Button(
-                    id={"type": "geolocate", "index": "point"},
-                    className="fa-solid fa-location-dot col-2",
-                    color="secondary",
-                    outline=False,
-                ),
-            ],
-            className="mb-2 col-12 row g-0",
+        dcc.Dropdown(
+            multi=False,
+            id="point_address",
+            style={"fontSize": "15px"},
+            className="col-12",
+        ),
+        dbc.Button(
+            id={"type": "geolocate", "index": "point"},
+            className="fa-solid fa-location-dot col-12 mt-2 mb-2",
+            color="secondary",
+            outline=False,
         ),
         dbc.Button(
             "Generate",
