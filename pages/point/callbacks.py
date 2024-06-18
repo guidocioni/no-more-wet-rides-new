@@ -115,6 +115,8 @@ def create_figure(data):
                                      longitude=data["lon"],
                                      from_time=time_radar.min() - pd.to_timedelta('10 min'),
                                      to_time=time_radar.max() + pd.to_timedelta('2h'))
+        # Convert value from mm / 15 min to mm / h
+        forecast["precipitation"] = forecast["precipitation"] * 4
 
         fig = go.Figure(
             data=[
