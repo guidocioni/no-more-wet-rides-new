@@ -249,3 +249,17 @@ clientside_callback(
     [State("time-plot-point", "id")],
     prevent_initial_call=True,
 )
+
+
+# Remove focus from dropdown once an element has been selected
+clientside_callback(
+    """
+    function(value) {
+        // Remove focus from the dropdown element
+        document.activeElement.blur();
+    }
+    """,
+    Output('garbage', 'data', allow_duplicate=True),
+    Input('point_address', 'value'),
+    prevent_initial_call=True
+)
