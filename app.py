@@ -44,7 +44,6 @@ def serve_layout():
             footer,
             dcc.Store(id="intermediate-value", data={}),
             dcc.Store(id="intermediate-value-point", data={}),
-            dcc.Store(id="garbage"),
             dcc.Store(id="addresses-cache", storage_type="local"),
             dcc.Store(id="point-cache", storage_type="local"),
             dcc.Store(id="addresses-autocomplete-point", storage_type="local"),

@@ -212,8 +212,7 @@ def map_click(clickData):
 
 
 @callback(
-    Output("garbage", "data", allow_duplicate=True),
-    [Input("point_address", "value")],
+    Input("point_address", "value"),
     prevent_initial_call=True,
 )
 def fire_get_radar_data(from_address):
@@ -241,10 +240,8 @@ clientside_callback(
                     targetElement.scrollIntoView({ behavior: 'smooth' });
                 }, 500); // in milliseconds
             }
-        return null;
     }
     """,
-    Output("garbage", "data", allow_duplicate=True),
     Input("intermediate-value-point", "data"),
     [State("time-plot-point", "id")],
     prevent_initial_call=True,
@@ -259,7 +256,6 @@ clientside_callback(
         document.activeElement.blur();
     }
     """,
-    Output('garbage', 'data', allow_duplicate=True),
-    Input('point_address', 'value'),
-    prevent_initial_call=True
+    Input("point_address", "value"),
+    prevent_initial_call=True,
 )

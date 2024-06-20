@@ -202,8 +202,7 @@ def map_click(clickData):
 
 
 @callback(
-    Output("garbage", "data"),
-    [Input("from_address", "value")],
+    Input("from_address", "value"),
     prevent_initial_call=True,
 )
 def fire_get_radar_data(from_address):
@@ -218,7 +217,6 @@ def fire_get_radar_data(from_address):
             raise PreventUpdate
         else:
             get_radar_data()
-            return None
     raise PreventUpdate
 
 
@@ -232,10 +230,8 @@ clientside_callback(
                     targetElement.scrollIntoView({ behavior: 'smooth' });
                 }, 500); // in milliseconds
             }
-        return null;
     }
     """,
-    Output("garbage", "data", allow_duplicate=True),
     Input("intermediate-value", "data"),
     [State("time-plot", "id")],
     prevent_initial_call=True,
