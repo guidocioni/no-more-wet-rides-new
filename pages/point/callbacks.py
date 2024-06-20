@@ -33,7 +33,6 @@ def suggest_locs(value, options):
         raise PreventUpdate
 
     options = [html.Option(value=name) for name in locations_names]
-    print(options)
 
     return options
 
