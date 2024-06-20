@@ -1,4 +1,4 @@
-from dash import Input, Output, callback, State, clientside_callback, html
+from dash import Input, Output, callback, State, clientside_callback, html, no_update
 from utils.utils import (
     get_place_address_reverse,
     get_place_address,
@@ -16,26 +16,31 @@ import pandas as pd
 
 @callback(
     Output('list-suggested-inputs', 'children'),
-    Input({"id": 'dest-loc', "type": "searchData"}, "value"),
+    Input({"id": 'point-loc', "type": "searchData"}, "value"),
+    State('list-suggested-inputs', 'children'),
     prevent_initial_call=True,
 )
-def suggest_locs(value):
-    if value is None or len(value) < 4 or len(value) > 15:
+def suggest_locs(value, options):
+    # Check if the value is already present in the options
+    if any(item["props"]["value"] == value for item in options):
+        raise PreventUpdate
+    if value is None or len(value) < 4:
         raise PreventUpdate
     locations_names, _ = get_place_address(
         value, limit=5
     )  # Get up to a maximum of 5 options
-    if len(locations_names) == 0:
+    if locations_names is None or len(locations_names) == 0:
         raise PreventUpdate
 
-    options = [html.Option(value=name, label=name) for name in locations_names]
+    options = [html.Option(value=name) for name in locations_names]
+    print(options)
 
     return options
 
 
 @callback(
     Output("point-cache", "data"),
-    Input({"id": 'dest-loc', "type": "searchData"}, "value"),
+    Input({"id": 'point-loc', "type": "searchData"}, "value"),
     prevent_initial_call=True,
 )
 def save_address_into_cache(point_address):
@@ -44,7 +49,7 @@ def save_address_into_cache(point_address):
 
 
 @callback(
-    Output({"id": 'dest-loc', "type": "searchData"}, "value"),
+    Output({"id": 'point-loc', "type": "searchData"}, "value"),
     Input("url", "pathname"),
     State("point-cache", "data"),
 )
@@ -65,7 +70,7 @@ def load_address_from_cache(_, point_cache_data):
         Output("map-point", "viewport"),
     ],
     Input({"type": "generate-button", "index": "point"}, "n_clicks"),
-    State({"id": 'dest-loc', "type": "searchData"}, "value"),
+    State({"id": 'point-loc', "type": "searchData"}, "value"),
 )
 def create_coords_and_map(n_clicks, point_address):
     """
@@ -152,7 +157,7 @@ def create_figure(data):
 
 @callback(
     [
-        Output({"id": 'dest-loc', "type": "searchData"}, "value", allow_duplicate=True),
+        Output({"id": 'point-loc', "type": "searchData"}, "value", allow_duplicate=True),
         Output("layer-point", "children", allow_duplicate=True),
         Output("map-point", "viewport", allow_duplicate=True),
     ],
@@ -185,7 +190,7 @@ def update_location(_, pos, n_clicks):
 @callback(
     [
         Output("layer-point", "children", allow_duplicate=True),
-        Output({"id": 'dest-loc', "type": "searchData"}, "value", allow_duplicate=True),
+        Output({"id": 'point-loc', "type": "searchData"}, "value", allow_duplicate=True),
     ],
     Input("map-point", "clickData"),
     prevent_initial_call=True,
@@ -204,7 +209,7 @@ def map_click(clickData):
 
 
 @callback(
-    Output({"id": 'dest-loc', "type": "searchData"}, "value", allow_duplicate=True),
+    Output({"id": 'point-loc', "type": "searchData"}, "value", allow_duplicate=True),
     Input("clear-button", "n_clicks"),
     prevent_initial_call=True
 )
@@ -215,7 +220,7 @@ def clear_input(n_clicks):
 
 
 # @callback(
-#     Input({"id": 'dest-loc', "type": "searchData"}, "value"),
+#     Input({"id": 'point-loc', "type": "searchData"}, "value"),
 #     prevent_initial_call=True,
 # )
 # def fire_get_radar_data(from_address):

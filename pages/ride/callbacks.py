@@ -1,4 +1,4 @@
-from dash import Input, Output, callback, State, clientside_callback
+from dash import Input, Output, callback, State, clientside_callback, html, MATCH
 from utils.utils import (
     zoom_center,
     make_empty_figure,
@@ -8,6 +8,7 @@ from utils.utils import (
     get_data,
     get_radar_data,
     get_directions,
+    get_place_address,
 )
 from dash.exceptions import PreventUpdate
 from utils.settings import shifts
@@ -18,8 +19,57 @@ import io
 
 
 @callback(
+    Output("list-suggested-departures", "children"),
+    Input({"type": "searchData", "id": "departure"}, "value"),
+    State("list-suggested-departures", "children"),
+    prevent_initial_call=True,
+)
+def suggest_locs(value, options):
+    # Check if the value is already present in the options
+    if any(item["props"]["value"] == value for item in options):
+        raise PreventUpdate
+    if value is None or len(value) < 4:
+        raise PreventUpdate
+    locations_names, _ = get_place_address(
+        value, limit=5
+    )  # Get up to a maximum of 5 options
+    if locations_names is None or len(locations_names) == 0:
+        raise PreventUpdate
+
+    options = [html.Option(value=name) for name in locations_names]
+
+    return options
+
+
+@callback(
+    Output("list-suggested-destinations", "children"),
+    Input({"type": "searchData", "id": "destination"}, "value"),
+    State("list-suggested-destinations", "children"),
+    prevent_initial_call=True,
+)
+def suggest_locs2(value, options):
+    # Check if the value is already present in the options
+    if any(item["props"]["value"] == value for item in options):
+        raise PreventUpdate
+    if value is None or len(value) < 4 or len(value) > 20:
+        raise PreventUpdate
+    locations_names, _ = get_place_address(
+        value, limit=5
+    )  # Get up to a maximum of 5 options
+    if locations_names is None or len(locations_names) == 0:
+        raise PreventUpdate
+
+    options = [html.Option(value=name) for name in locations_names]
+
+    return options
+
+
+@callback(
     Output("addresses-cache", "data"),
-    [Input("from_address", "value"), Input("to_address", "value")],
+    [
+        Input(dict(type="searchData", id="departure"), "value"),
+        Input(dict(type="searchData", id="destination"), "value"),
+    ],
     prevent_initial_call=True,
 )
 def save_addresses_into_cache(from_address, to_address):
@@ -29,8 +79,8 @@ def save_addresses_into_cache(from_address, to_address):
 
 @callback(
     [
-        Output("from_address", "value"),
-        Output("to_address", "value"),
+        Output(dict(type="searchData", id="departure"), "value"),
+        Output(dict(type="searchData", id="destination"), "value"),
     ],
     Input("url", "pathname"),
     State("addresses-cache", "data"),
@@ -49,11 +99,16 @@ def load_addresses_from_cache(_, addresses_cache_data):
 
 @callback(
     [
-        Output("from_address", "value", allow_duplicate=True),
-        Output("to_address", "value", allow_duplicate=True),
+        Output(dict(type="searchData", id="departure"), "value", allow_duplicate=True),
+        Output(
+            dict(type="searchData", id="destination"), "value", allow_duplicate=True
+        ),
     ],
     Input("exchange", "n_clicks"),
-    [State("from_address", "value"), State("to_address", "value")],
+    [
+        State(dict(type="searchData", id="departure"), "value"),
+        State(dict(type="searchData", id="destination"), "value"),
+    ],
     prevent_initial_call=True,
 )
 def switch_addresses(click, from_address, to_address):
@@ -74,8 +129,8 @@ def switch_addresses(click, from_address, to_address):
     ],
     Input({"type": "generate-button", "index": "ride"}, "n_clicks"),
     [
-        State("from_address", "value"),
-        State("to_address", "value"),
+        State(dict(type="searchData", id="departure"), "value"),
+        State(dict(type="searchData", id="destination"), "value"),
         State("transport_mode", "value"),
     ],
 )
@@ -173,7 +228,7 @@ def show_long_ride_warning(data):
 
 
 @callback(
-    Output("from_address", "value", allow_duplicate=True),
+    Output(dict(type="searchData", id="departure"), "value", allow_duplicate=True),
     [
         Input("geolocation", "local_date"),  # need it just to force an update!
         Input("geolocation", "position"),
@@ -188,7 +243,12 @@ def update_location(_, pos, n_clicks):
 
 
 @callback(
-    [Output("layer", "children"), Output("to_address", "value", allow_duplicate=True)],
+    [
+        Output("layer", "children"),
+        Output(
+            dict(type="searchData", id="destination"), "value", allow_duplicate=True
+        ),
+    ],
     [Input("map", "clickData")],
     prevent_initial_call=True,
 )
@@ -201,23 +261,23 @@ def map_click(clickData):
     raise PreventUpdate
 
 
-@callback(
-    Input("from_address", "value"),
-    prevent_initial_call=True,
-)
-def fire_get_radar_data(from_address):
-    """
-    Whenever the user starts typing something in the from_address
-    field, we start downloading data so that they're already in the cache.
-    Note that we don't do any subsetting, we just download the data
-    """
-    if from_address is not None:
-        if len(from_address) != 6:
-            # Do not trigger unless the address is longer than a threshold
-            raise PreventUpdate
-        else:
-            get_radar_data()
-    raise PreventUpdate
+# @callback(
+#     Input(dict(type="searchData", id="departure"), "value"),
+#     prevent_initial_call=True,
+# )
+# def fire_get_radar_data(from_address):
+#     """
+#     Whenever the user starts typing something in the from_address
+#     field, we start downloading data so that they're already in the cache.
+#     Note that we don't do any subsetting, we just download the data
+#     """
+#     if from_address is not None:
+#         if len(from_address) != 6:
+#             # Do not trigger unless the address is longer than a threshold
+#             raise PreventUpdate
+#         else:
+#             get_radar_data()
+#     raise PreventUpdate
 
 
 # Scroll to the plot when it is ready
@@ -236,3 +296,14 @@ clientside_callback(
     [State("time-plot", "id")],
     prevent_initial_call=True,
 )
+
+
+@callback(
+    Output({"id": MATCH, "type": "searchData"}, "value", allow_duplicate=True),
+    Input(dict(type="clearButton", id=MATCH), "n_clicks"),
+    prevent_initial_call=True,
+)
+def clear_input(n_clicks):
+    if n_clicks:
+        return ""
+    return PreventUpdate

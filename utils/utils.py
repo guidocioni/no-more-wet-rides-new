@@ -84,21 +84,24 @@ def get_directions(
 
 
 @cache.memoize(900)
-def get_place_address(place, country='de', limit=5, language='de'):
+def get_place_address(place, country='de', limit=5, language=None):
     url = f"{APIURL_PLACES}/{place}.json"
 
     payload = {
         'country': country,
         'access_token': apiKey,
-        'language': language,
-        'limit': limit
+        'limit': limit,
+        'proximity': 'ip'
     }
+
+    if language:
+        payload['language'] = language
 
     response = requests.get(url, params=payload)
     json_data = json.loads(response.text)
 
     if len(json_data['features']) == 0:
-        return None
+        return None, None
 
     place_name = [f['place_name'] for f in json_data["features"]]
     place_center = [f['center'] for f in json_data["features"]]

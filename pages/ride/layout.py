@@ -9,53 +9,88 @@ register_page(__name__, path="/", title="Route")
 controls = dbc.Card(
     [
         html.Div(id="geo"),
-        dbc.Spinner(
-            dbc.InputGroup(
-                [
-                    dbc.InputGroupText("from"),
-                    dbc.Input(
-                        placeholder="type address or geolocate",
-                        id="from_address",
-                        type="text",
-                        autocomplete="street-address",
-                        persistence=True,
-                    ),
-                    dbc.Button(
-                        id={"type": "geolocate", "index": "ride"},
-                        className="fa-solid fa-location-dot col-2",
-                        color="secondary",
-                        outline=False,
-                    ),
-                ],
-                className="mb-2 col-12",
-            ),
-            type="grow",
-        ),
-        dbc.Spinner(
-            dbc.InputGroup(
-                [
-                    dbc.InputGroupText("to"),
-                    dbc.Input(
-                        placeholder="type address or click on map",
-                        id="to_address",
-                        type="text",
-                        autocomplete="street-address",
-                        persistence=True,
-                    ),
-                    dbc.Button(
-                        id="exchange",
-                        className="fa-solid fa-exchange col-2",
-                        color="secondary",
-                        outline=False,
-                    ),
-                ],
-                className="mb-2 col-12",
-            ),
-            type="grow",
+        dbc.Button(
+            id={"type": "geolocate", "index": "ride"},
+            className="fa-solid fa-location-dot col-12 mb-1",
+            size="sm",
+            color="secondary",
+            outline=False,
         ),
         dbc.InputGroup(
             [
-                dbc.InputGroupText("how"),
+                dbc.Button(
+                    className="fa-solid fa-house",
+                    disabled=True,
+                    color="light",
+                    size="sm",
+                ),
+                dbc.Input(
+                    placeholder="type address or geolocate",
+                    id=dict(type="searchData", id="departure"),
+                    type="text",
+                    autocomplete="off",
+                    persistence=True,
+                    list='list-suggested-departures',
+                ),
+                html.Datalist(
+                    id='list-suggested-departures',
+                    children=[html.Option(value="Nothing (yet)")],
+                ),
+                dbc.Button(
+                    className="fa-solid fa-xmark",
+                    n_clicks=0,
+                    id=dict(type="clearButton", id="departure"),
+                    color="light",
+                    size="sm",
+                ),
+            ],
+            className="col-12",
+        ),
+        dbc.Button(
+            id="exchange",
+            className="fa-solid fa-exchange col-12 mt-1 mb-1",
+            color="secondary",
+            outline=False,
+            size="sm",
+        ),
+        dbc.InputGroup(
+            [
+                dbc.Button(
+                    className="fa-solid fa-flag-checkered",
+                    disabled=True,
+                    color="light",
+                    size="sm",
+                ),
+                dbc.Input(
+                    placeholder="type address or click on map",
+                    id=dict(type="searchData", id="destination"),
+                    type="text",
+                    autocomplete="off",
+                    persistence=True,
+                    list='list-suggested-destinations',
+                ),
+                dbc.Button(
+                    className="fa-solid fa-xmark",
+                    n_clicks=0,
+                    id=dict(type="clearButton", id="destination"),
+                    color="light",
+                    size="sm",
+                ),
+                html.Datalist(
+                    id='list-suggested-destinations',
+                    children=[html.Option(value="Nothing (yet)")],
+                ),
+            ],
+            className="mb-2 col-12",
+        ),
+        dbc.InputGroup(
+            [
+                dbc.Button(
+                    className="fa-solid fa-bicycle",
+                    disabled=True,
+                    color="light",
+                    size="sm",
+                ),
                 dbc.Select(
                     id="transport_mode",
                     value="cycling",

@@ -10,13 +10,14 @@ controls = dbc.Card(
     [
         html.Div(id="geo"),
         html.Datalist(
-            id="list-suggested-inputs", children=[html.Option(value="empty")]
+            id="list-suggested-inputs",
+            children=[html.Option(value="Nothing (yet)")],
         ),
         dbc.InputGroup(
             [
                 dbc.Input(
                     placeholder="Type address",
-                    id=dict(type="searchData", id="dest-loc"),
+                    id=dict(type="searchData", id="point-loc"),
                     type="text",
                     persistence=True,
                     autocomplete="off",
