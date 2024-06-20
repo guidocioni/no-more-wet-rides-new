@@ -23,10 +23,13 @@ controls = dbc.Card(
                     autocomplete="off",
                     list="list-suggested-inputs",
                 ),
-                dbc.Button(className="fa-solid fa-xmark",
-                           n_clicks=0,
-                           id='clear-button',
-                           color='light', size="sm"),
+                dbc.Button(
+                    className="fa-solid fa-xmark",
+                    n_clicks=0,
+                    id="clear-button",
+                    color="light",
+                    size="sm",
+                ),
             ]
         ),
         dbc.Button(

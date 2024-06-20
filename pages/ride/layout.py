@@ -30,10 +30,10 @@ controls = dbc.Card(
                     type="text",
                     autocomplete="off",
                     persistence=True,
-                    list='list-suggested-departures',
+                    list="list-suggested-departures",
                 ),
                 html.Datalist(
-                    id='list-suggested-departures',
+                    id="list-suggested-departures",
                     children=[html.Option(value="Nothing (yet)")],
                 ),
                 dbc.Button(
@@ -67,7 +67,7 @@ controls = dbc.Card(
                     type="text",
                     autocomplete="off",
                     persistence=True,
-                    list='list-suggested-destinations',
+                    list="list-suggested-destinations",
                 ),
                 dbc.Button(
                     className="fa-solid fa-xmark",
@@ -77,7 +77,7 @@ controls = dbc.Card(
                     size="sm",
                 ),
                 html.Datalist(
-                    id='list-suggested-destinations',
+                    id="list-suggested-destinations",
                     children=[html.Option(value="Nothing (yet)")],
                 ),
             ],
@@ -214,6 +214,49 @@ fig_card = html.Div(
 )
 
 
+details_card = dbc.Card(
+    dbc.Row(
+        [
+            dbc.Col(
+                [
+                    dbc.Button(
+                        className="fa-solid fa-stopwatch",
+                        disabled=True,
+                        color="light",
+                        size="md",
+                    ),
+                    dbc.Spinner(html.Span(id='ride-duration'), type='grow'),
+                ]
+            ),
+            dbc.Col(
+                [
+                    dbc.Button(
+                        className="fa-solid fa-route",
+                        disabled=True,
+                        color="light",
+                        size="md",
+                    ),
+                    dbc.Spinner(html.Span(id='ride-distance'), type='grow'),
+                ]
+            ),
+            dbc.Col(
+                [
+                    dbc.Button(
+                        className="fa-solid fa-clock",
+                        disabled=True,
+                        color="light",
+                        size="md",
+                    ),
+                    dbc.Spinner(html.Span(id='best-time'), type='grow'),
+                ]
+            ),
+        ]
+    ),
+    body=True,
+    className='mb-3'
+)
+
+
 help_card = dbc.Accordion(
     [
         dbc.AccordionItem(
@@ -278,7 +321,10 @@ layout = html.Div(
                 dbc.Col(
                     [
                         dbc.Collapse(
-                            dbc.Spinner(fig_card),
+                            [
+                                details_card,
+                                dbc.Spinner(fig_card),
+                            ],
                             id={"type": "fade", "index": "ride"},
                             is_open=False,
                         ),

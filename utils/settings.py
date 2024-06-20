@@ -18,7 +18,7 @@ APIURL_DIRECTIONS = 'https://api.mapbox.com/directions/v5/mapbox'
 apiKey = os.getenv("MAPBOX_KEY", "")
 
 # Here set the shifts (in units of 5 minutes per shift) for the final forecast
-shifts = (1, 3, 5, 7, 9)
+shifts = (1, 2, 3, 5, 7, 10, 13)
 
 mapURL = (
     "https://api.mapbox.com/styles/v1/mapbox/dark-v10/tiles/{z}/{x}/{y}{r}?access_token="

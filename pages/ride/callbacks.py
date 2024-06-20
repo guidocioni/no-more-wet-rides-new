@@ -126,6 +126,8 @@ def switch_addresses(click, from_address, to_address):
         Output("track-layer", "children"),
         Output("intermediate-value", "data"),
         Output("map", "viewport"),
+        Output("ride-duration", "children"),
+        Output("ride-distance", "children")
     ],
     Input({"type": "generate-button", "index": "ride"}, "n_clicks"),
     [
@@ -144,7 +146,7 @@ def create_coords_and_map(n_clicks, from_address, to_address, mode):
         raise PreventUpdate
     else:
         if from_address is not None and to_address is not None:
-            source, dest, lons, lats, dtime = get_directions(
+            source, dest, lons, lats, dtime, meta = get_directions(
                 from_address, to_address, mode
             )
             df = pd.DataFrame(
@@ -173,13 +175,16 @@ def create_coords_and_map(n_clicks, from_address, to_address, mode):
                 new_children,
                 df.to_json(date_format="iso", orient="split"),
                 dict(center=[center["lat"], center["lon"]], zoom=zoom),
+                f' {meta["duration"]:.1f} min ',
+                f' {meta["distance"]:.1f} km '
             )
         else:
             raise PreventUpdate
 
 
 @callback(
-    Output("time-plot", "figure"),
+    [Output("time-plot", "figure"),
+    Output("best-time", "children")],
     [Input("intermediate-value", "data"), Input("switches-input", "value")],
 )
 def create_figure(data, switch):
@@ -192,14 +197,15 @@ def create_figure(data, switch):
             # convert dtime to timedelta to avoid problems
             df["dtime"] = pd.to_timedelta(df["dtime"], unit="s")
             out = get_data(df.lons, df.lats, df.dtime)
-            # Check if there is no rain at all beargfore plotting
+            # Check if there is no rain at all before plotting
             if (out.sum() < 0.01).all():
-                return make_empty_figure("🎉 Yey, no rain <br>forecast on your ride 🎉")
+                return make_empty_figure("🎉 Yey, no rain <br>forecast on your ride 🎉"), ""
             else:
+                min_time = out.sum().idxmin().strftime("%H:%M:%S")
                 if switch == ["time_series"]:
-                    return make_fig_time(out)
+                    return make_fig_time(out), min_time
                 else:
-                    return make_fig_bars(out)
+                    return make_fig_bars(out), min_time
         else:
             raise PreventUpdate
     raise PreventUpdate

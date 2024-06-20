@@ -79,8 +79,16 @@ def get_directions(
             logging.warning(
                 "simplify=True but simplification library is missing, returning original"
             )
+    # Add some additional metadata
+    try:
+        meta = {
+            "duration" : json_data["routes"][0]["legs"][0]["duration"] / 60.,
+            "distance": json_data["routes"][0]["legs"][0]["distance"] / 1000.
+        }
+    except:
+        meta = {}
 
-    return sourcePlace, destPlace, lons, lats, dtime
+    return sourcePlace, destPlace, lons, lats, dtime, meta
 
 
 @cache.memoize(900)
