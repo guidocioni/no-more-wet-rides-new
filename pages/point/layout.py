@@ -9,11 +9,24 @@ register_page(__name__, path="/point", title="Point")
 controls = dbc.Card(
     [
         html.Div(id="geo"),
-        dcc.Dropdown(
-            multi=False,
-            id="point_address",
-            style={"fontSize": "15px"},
-            className="col-12",
+        html.Datalist(
+            id="list-suggested-inputs", children=[html.Option(value="empty")]
+        ),
+        dbc.InputGroup(
+            [
+                dbc.Input(
+                    placeholder="Type address",
+                    id=dict(type="searchData", id="dest-loc"),
+                    type="text",
+                    persistence=True,
+                    autocomplete="off",
+                    list="list-suggested-inputs",
+                ),
+                dbc.Button(className="fa-solid fa-xmark",
+                           n_clicks=0,
+                           id='clear-button',
+                           color='light', size="sm"),
+            ]
         ),
         dbc.Button(
             id={"type": "geolocate", "index": "point"},

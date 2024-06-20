@@ -1,4 +1,4 @@
-from dash import Input, Output, callback, State, clientside_callback
+from dash import Input, Output, callback, State, clientside_callback, html
 from utils.utils import (
     get_place_address_reverse,
     get_place_address,
@@ -15,16 +15,12 @@ import pandas as pd
 
 
 @callback(
-    Output("point_address", "options", allow_duplicate=True),
-    Input("point_address", "search_value"),
+    Output('list-suggested-inputs', 'children'),
+    Input({"id": 'dest-loc', "type": "searchData"}, "value"),
     prevent_initial_call=True,
 )
-def suggest_locs_dropdown(value):
-    """
-    When the user types, update the dropdown with locations
-    found with the API
-    """
-    if value is None or len(value) < 4:
+def suggest_locs(value):
+    if value is None or len(value) < 4 or len(value) > 15:
         raise PreventUpdate
     locations_names, _ = get_place_address(
         value, limit=5
@@ -32,33 +28,33 @@ def suggest_locs_dropdown(value):
     if len(locations_names) == 0:
         raise PreventUpdate
 
-    options = [{"label": name, "value": name} for name in locations_names]
+    options = [html.Option(value=name, label=name) for name in locations_names]
 
     return options
 
 
 @callback(
-    [Output("point-cache", "data"), Output("addresses-autocomplete-point", "data")],
-    [Input("point_address", "value"), Input("point_address", "options")],
+    Output("point-cache", "data"),
+    Input({"id": 'dest-loc', "type": "searchData"}, "value"),
     prevent_initial_call=True,
 )
-def save_address_into_cache(point_address, point_addresses):
+def save_address_into_cache(point_address):
     # We don't check anything on the input because we want to save them regardless
-    return {"point_address": point_address}, point_addresses
+    return {"point_address": point_address}
 
 
 @callback(
-    [Output("point_address", "value"), Output("point_address", "options")],
+    Output({"id": 'dest-loc', "type": "searchData"}, "value"),
     Input("url", "pathname"),
-    [State("point-cache", "data"), State("addresses-autocomplete-point", "data")],
+    State("point-cache", "data"),
 )
-def load_address_from_cache(_, point_cache_data, options_cache_data):
+def load_address_from_cache(_, point_cache_data):
     """
     Should only load when the application first start and populate
     the text boxes with the point that were saved in the cache
     """
-    if point_cache_data is not None and options_cache_data is not None:
-        return point_cache_data.get("point_address", ""), options_cache_data
+    if point_cache_data is not None:
+        return point_cache_data.get("point_address", "")
     raise PreventUpdate
 
 
@@ -69,7 +65,7 @@ def load_address_from_cache(_, point_cache_data, options_cache_data):
         Output("map-point", "viewport"),
     ],
     Input({"type": "generate-button", "index": "point"}, "n_clicks"),
-    State("point_address", "value"),
+    State({"id": 'dest-loc', "type": "searchData"}, "value"),
 )
 def create_coords_and_map(n_clicks, point_address):
     """
@@ -156,8 +152,7 @@ def create_figure(data):
 
 @callback(
     [
-        Output("point_address", "value", allow_duplicate=True),
-        Output("point_address", "options", allow_duplicate=True),
+        Output({"id": 'dest-loc', "type": "searchData"}, "value", allow_duplicate=True),
         Output("layer-point", "children", allow_duplicate=True),
         Output("map-point", "viewport", allow_duplicate=True),
     ],
@@ -177,7 +172,6 @@ def update_location(_, pos, n_clicks):
         address = get_place_address_reverse(pos["lon"], pos["lat"])
         return (
             address,
-            [{"value": address, "label": address}],
             [
                 dl.Marker(
                     position=[pos["lat"], pos["lon"]], children=dl.Tooltip(address)
@@ -191,8 +185,7 @@ def update_location(_, pos, n_clicks):
 @callback(
     [
         Output("layer-point", "children", allow_duplicate=True),
-        Output("point_address", "value", allow_duplicate=True),
-        Output("point_address", "options", allow_duplicate=True),
+        Output({"id": 'dest-loc', "type": "searchData"}, "value", allow_duplicate=True),
     ],
     Input("map-point", "clickData"),
     prevent_initial_call=True,
@@ -204,30 +197,40 @@ def map_click(clickData):
         address = get_place_address_reverse(lon, lat)
         return (
             [dl.Marker(position=[lat, lon], children=dl.Tooltip(address))],
-            address,
-            [{"value": address, "label": address}],
+            address
         )
 
     raise PreventUpdate
 
 
 @callback(
-    Input("point_address", "value"),
-    prevent_initial_call=True,
+    Output({"id": 'dest-loc', "type": "searchData"}, "value", allow_duplicate=True),
+    Input("clear-button", "n_clicks"),
+    prevent_initial_call=True
 )
-def fire_get_radar_data(from_address):
-    """
-    Whenever the user starts typing something in the from_address
-    field, we start downloading data so that they're already in the cache.
-    Note that we don't do any subsetting, we just download the data
-    """
-    if from_address is not None:
-        if len(from_address) != 6:
-            # Do not trigger unless the address is longer than a threshold
-            raise PreventUpdate
-        else:
-            get_radar_data()
-    raise PreventUpdate
+def clear_input(n_clicks):
+    if n_clicks:
+        return ""
+    return PreventUpdate
+
+
+# @callback(
+#     Input({"id": 'dest-loc', "type": "searchData"}, "value"),
+#     prevent_initial_call=True,
+# )
+# def fire_get_radar_data(from_address):
+#     """
+#     Whenever the user starts typing something in the from_address
+#     field, we start downloading data so that they're already in the cache.
+#     Note that we don't do any subsetting, we just download the data
+#     """
+#     if from_address is not None:
+#         if len(from_address) != 6:
+#             # Do not trigger unless the address is longer than a threshold
+#             raise PreventUpdate
+#         else:
+#             get_radar_data()
+#     raise PreventUpdate
 
 
 # Scroll to the plot 500 ms after the generate button has been pressed
@@ -249,13 +252,13 @@ clientside_callback(
 
 
 # Remove focus from dropdown once an element has been selected
-clientside_callback(
-    """
-    function(value) {
-        // Remove focus from the dropdown element
-        document.activeElement.blur();
-    }
-    """,
-    Input("point_address", "value"),
-    prevent_initial_call=True,
-)
+# clientside_callback(
+#     """
+#     function(value) {
+#         // Remove focus from the dropdown element
+#         document.activeElement.blur();
+#     }
+#     """,
+#     Input("point_address", "value"),
+#     prevent_initial_call=True,
+# )
