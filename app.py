@@ -1,5 +1,6 @@
 import time
 import dash_bootstrap_components as dbc
+import dash_mantine_components as dmc
 from dash import (
     dcc,
     html,
@@ -11,7 +12,7 @@ from dash import (
     MATCH,
     ALL,
     Dash,
-    page_registry
+    page_registry,
 )
 from utils.settings import cache, URL_BASE_PATHNAME
 from components import navbar, footer
@@ -36,21 +37,23 @@ with server.app_context():
 
 
 def serve_layout():
-    return html.Div(
-        [
-            dcc.Location(id="url", refresh=False),
-            navbar(),
-            dbc.Container(page_container, class_name="my-2", id="content"),
-            footer,
-            dcc.Store(id="intermediate-value", data={}),
-            dcc.Store(id="intermediate-value-point", data={}),
-            dcc.Store(id="addresses-cache", storage_type="local"),
-            dcc.Store(id="point-cache", storage_type="local"),
-            dcc.Store(id="addresses-autocomplete-point", storage_type="local"),
-            dcc.Interval(
-                id="interval-wms-refresh", interval=60000, n_intervals=0
-            ),  # 60 seconds
-        ],
+    return dmc.MantineProvider(
+        html.Div(
+            [
+                dcc.Location(id="url", refresh=False),
+                navbar(),
+                dbc.Container(page_container, class_name="my-2", id="content"),
+                footer,
+                dcc.Store(id="intermediate-value", data={}),
+                dcc.Store(id="intermediate-value-point", data={}),
+                dcc.Store(id="addresses-cache", storage_type="local"),
+                dcc.Store(id="point-cache", storage_type="local"),
+                dcc.Store(id="addresses-autocomplete-point", storage_type="local"),
+                dcc.Interval(
+                    id="interval-wms-refresh", interval=60000, n_intervals=0
+                ),  # 60 seconds
+            ],
+        )
     )
 
 
@@ -110,7 +113,9 @@ def refresh_wms(n_intervals):
 
 
 @callback(
-    Output("geo", "children"), Input({'type':'geolocate', 'index': ALL}, "n_clicks"), prevent_initial_call=True
+    Output("geo", "children"),
+    Input({"type": "geolocate", "index": ALL}, "n_clicks"),
+    prevent_initial_call=True,
 )
 def start_geolocation_section(n):
     return html.Div(
@@ -122,14 +127,14 @@ def start_geolocation_section(n):
 
 @callback(
     Output("geolocation", "update_now", allow_duplicate=True),
-    Input({'type':'geolocate', 'index': ALL}, "n_clicks"),
+    Input({"type": "geolocate", "index": ALL}, "n_clicks"),
     prevent_initial_call=True,
 )
 def update_now(click):
     """
     Force a request for geolocate
     """
-    return True if click and click > 0 else False
+    return True if click else False
 
 
 @callback(
@@ -149,20 +154,19 @@ def update_navbar_links(pathname):
     """
     return [pathname == page["relative_path"] for page in page_registry.values()]
 
-page_titles = {
-    page["relative_path"]: page["title"] for page in page_registry.values()
-}
+
+page_titles = {page["relative_path"]: page["title"] for page in page_registry.values()}
 
 
-@callback(Output("navbar-title-for-mobile", "children"),
-          [Input("url", "pathname"),
-           Input("navbar-collapse", "is_open")]
-          )
+@callback(
+    Output("navbar-title-for-mobile", "children"),
+    [Input("url", "pathname"), Input("navbar-collapse", "is_open")],
+)
 def update_navbar_title(pathname, is_open):
-    '''
-    Update the navbar title (only on mobile) with the page title every time 
+    """
+    Update the navbar title (only on mobile) with the page title every time
     the page is changed. Also check if navbar is collapsed
-    '''
+    """
     if not is_open:
         return page_titles.get(pathname, "")
     else:
