@@ -92,7 +92,7 @@ def get_directions(
 
 
 @cache.memoize(900)
-def get_place_address(place, country='de', limit=5, language=None):
+def get_place_address(place, country='de,fr,ch,at', limit=5, language=None):
     url = f"{APIURL_PLACES}/{place}.json"
 
     payload = {
@@ -123,7 +123,7 @@ def get_place_address(place, country='de', limit=5, language=None):
 
 
 @cache.memoize(900)
-def get_place_address_reverse(lon, lat, country='de', limit=1, language='de'):
+def get_place_address_reverse(lon, lat, country='de,fr,ch,at', limit=1, language='de'):
     url = f"{APIURL_PLACES}/{lon},{lat}.json"
 
     payload = {

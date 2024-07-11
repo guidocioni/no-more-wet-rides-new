@@ -1,4 +1,6 @@
 import dash_bootstrap_components as dbc
+import dash_mantine_components as dmc
+from dash_iconify import DashIconify
 from dash import dcc, html, register_page
 from utils.settings import mapURL, attribution
 from .callbacks import *
@@ -9,21 +11,18 @@ register_page(__name__, path="/", title="Route")
 controls = dbc.Card(
     [
         html.Div(id="geo"),
-        dbc.Button(
+        dmc.Button(
+            "Geolocate",
             id={"type": "geolocate", "index": "ride"},
-            className="fa-solid fa-location-dot col-12 mb-1",
-            size="sm",
-            color="secondary",
-            outline=False,
+            leftSection=DashIconify(icon="ion:location-outline", width=20),
+            className="col-12 mb-1",
+            size='xs',
+            color='gray',
         ),
         dbc.InputGroup(
             [
-                dbc.Button(
-                    className="fa-solid fa-house",
-                    disabled=True,
-                    color="light",
-                    size="sm",
-                ),
+                DashIconify(icon="gis:route-start", width=30),
+                dmc.Space(w=5),
                 dbc.Input(
                     placeholder="type address or geolocate",
                     id=dict(type="searchData", id="departure"),
@@ -37,30 +36,27 @@ controls = dbc.Card(
                     children=[html.Option(value="Nothing (yet)")],
                 ),
                 dbc.Button(
-                    className="fa-solid fa-xmark",
+                    DashIconify(icon="fluent-mdl2:clear", width=10),
                     n_clicks=0,
                     id=dict(type="clearButton", id="departure"),
                     color="light",
                     size="sm",
                 ),
             ],
-            className="col-12",
+            # className="col-12",
         ),
-        dbc.Button(
+        dmc.Button(
+            "",
             id="exchange",
-            className="fa-solid fa-exchange col-12 mt-1 mb-1",
-            color="secondary",
-            outline=False,
-            size="sm",
+            leftSection=DashIconify(icon="ph:arrows-down-up-duotone", width=30),
+            className="col-12 mt-1 mb-1",
+            size='xs',
+            color='gray',
         ),
         dbc.InputGroup(
             [
-                dbc.Button(
-                    className="fa-solid fa-flag-checkered",
-                    disabled=True,
-                    color="light",
-                    size="sm",
-                ),
+                DashIconify(icon="gis:route-end", width=30),
+                dmc.Space(w=5),
                 dbc.Input(
                     placeholder="type address or click on map",
                     id=dict(type="searchData", id="destination"),
@@ -70,7 +66,7 @@ controls = dbc.Card(
                     list="list-suggested-destinations",
                 ),
                 dbc.Button(
-                    className="fa-solid fa-xmark",
+                    DashIconify(icon="fluent-mdl2:clear", width=10),
                     n_clicks=0,
                     id=dict(type="clearButton", id="destination"),
                     color="light",
@@ -85,12 +81,8 @@ controls = dbc.Card(
         ),
         dbc.InputGroup(
             [
-                dbc.Button(
-                    className="fa-solid fa-bicycle",
-                    disabled=True,
-                    color="light",
-                    size="sm",
-                ),
+                DashIconify(icon="material-symbols:transportation-sharp", width=30),
+                dmc.Space(w=5),
                 dbc.Select(
                     id="transport_mode",
                     value="cycling",
@@ -328,7 +320,7 @@ layout = html.Div(
                             id={"type": "fade", "index": "ride"},
                             is_open=False,
                         ),
-                        help_card,
+                        # help_card,
                     ],
                     sm=12,
                     md=12,

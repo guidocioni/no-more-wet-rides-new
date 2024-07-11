@@ -7,6 +7,7 @@ from dash import (
     page_container,
     Input,
     Output,
+    State,
     clientside_callback,
     callback,
     MATCH,
@@ -42,6 +43,17 @@ def serve_layout():
             [
                 dcc.Location(id="url", refresh=False),
                 navbar(),
+                dbc.Modal(
+                    [
+                        dbc.ModalHeader("Error"),
+                        dbc.ModalBody(
+                            "", id="error-message"
+                        ),  # Placeholder for error message
+                    ],
+                    id="error-modal",
+                    size="lg",
+                    backdrop="static",
+                ),
                 dbc.Container(page_container, class_name="my-2", id="content"),
                 footer,
                 dcc.Store(id="intermediate-value", data={}),
@@ -126,15 +138,19 @@ def start_geolocation_section(n):
 
 
 @callback(
-    Output("geolocation", "update_now", allow_duplicate=True),
-    Input({"type": "geolocate", "index": ALL}, "n_clicks"),
+    [
+        Output("geolocation", "update_now", allow_duplicate=True),
+        Output({"type": "geolocate", "index": ALL}, "loading", allow_duplicate=True),
+    ],
+    Input("geo", "children"),
+    State({"type": "geolocate", "index": ALL}, "n_clicks"),
     prevent_initial_call=True,
 )
-def update_now(click):
+def update_now(_children, _n_clicks):
     """
     Force a request for geolocate
     """
-    return True if click else False
+    return True, [True]
 
 
 @callback(
@@ -171,30 +187,6 @@ def update_navbar_title(pathname, is_open):
         return page_titles.get(pathname, "")
     else:
         return ""
-
-
-# @server.route("/nmwr/query", methods=["GET", "POST"])
-# def query():
-#     from_address = request.args.get("from")
-#     to_address = request.args.get("to")
-#     mode = request.args.get("mode")
-
-#     if from_address and to_address:
-#         if mode:
-#             source, dest, lons, lats, dtime = get_directions(
-#                 from_address, to_address, mode
-#             )
-#         else:
-#             source, dest, lons, lats, dtime = get_directions(
-#                 from_address, to_address, mode="cycling"
-#             )
-#         # compute the data from radar, the result is cached
-#         out = get_data(lons, lats, dtime)
-#         out["source"] = source
-#         out["destination"] = dest
-#         return out.to_json(orient="split", date_format="iso")
-#     else:
-#         return None
 
 
 if __name__ == "__main__":

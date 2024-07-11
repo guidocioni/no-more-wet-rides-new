@@ -1,4 +1,6 @@
 import dash_bootstrap_components as dbc
+import dash_mantine_components as dmc
+from dash_iconify import DashIconify
 from dash import dcc, html, register_page
 from utils.settings import mapURL, attribution
 from .callbacks import *
@@ -9,6 +11,14 @@ register_page(__name__, path="/point", title="Point")
 controls = dbc.Card(
     [
         html.Div(id="geo"),
+        dmc.Button(
+            "Geolocate",
+            id={"type": "geolocate", "index": "point"},
+            leftSection=DashIconify(icon="ion:location-outline", width=20),
+            className="col-12 mb-1",
+            size='xs',
+            color='gray',
+        ),
         html.Datalist(
             id="list-suggested-inputs",
             children=[html.Option(value="Nothing (yet)")],
@@ -33,15 +43,9 @@ controls = dbc.Card(
             ]
         ),
         dbc.Button(
-            id={"type": "geolocate", "index": "point"},
-            className="fa-solid fa-location-dot col-12 mt-2 mb-2",
-            color="secondary",
-            outline=False,
-        ),
-        dbc.Button(
             "Generate",
             id={"type": "generate-button", "index": "point"},
-            className="mr-2 col-12",
+            className="mt-2 mr-2 col-12",
         ),
     ],
     body=True,

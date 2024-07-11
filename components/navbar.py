@@ -9,13 +9,14 @@ from dash import (
     html,
 )
 import dash_bootstrap_components as dbc
-
+from dash_iconify import DashIconify
 
 def navbar():
     return dbc.Navbar(
         dbc.Container(
             [
-                dbc.NavbarBrand('NoMoreWetRides 🚴', class_name='fs-4'),
+                dbc.NavbarBrand(['NoMoreWetRides ',
+                                 DashIconify(icon="streamline-emojis:bicycle",width=40)], class_name='fs-4'),
                 html.Div(
                     id='navbar-title-for-mobile',
                     className='d-md-none fs-6',  # Show only on mobile devices

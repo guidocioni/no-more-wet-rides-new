@@ -1,4 +1,13 @@
-from dash import Input, Output, callback, State, clientside_callback, html, MATCH
+from dash import (
+    Input,
+    Output,
+    callback,
+    State,
+    clientside_callback,
+    html,
+    MATCH,
+    no_update,
+)
 from utils.utils import (
     zoom_center,
     make_empty_figure,
@@ -11,7 +20,7 @@ from utils.utils import (
     get_place_address,
 )
 from dash.exceptions import PreventUpdate
-from utils.settings import shifts
+from utils.settings import shifts, logging
 import pandas as pd
 import numpy as np
 import dash_leaflet as dl
@@ -127,7 +136,9 @@ def switch_addresses(click, from_address, to_address):
         Output("intermediate-value", "data"),
         Output("map", "viewport"),
         Output("ride-duration", "children"),
-        Output("ride-distance", "children")
+        Output("ride-distance", "children"),
+        Output("error-message", "children", allow_duplicate=True),
+        Output("error-modal", "is_open", allow_duplicate=True),
     ],
     Input({"type": "generate-button", "index": "ride"}, "n_clicks"),
     [
@@ -135,6 +146,7 @@ def switch_addresses(click, from_address, to_address):
         State(dict(type="searchData", id="destination"), "value"),
         State("transport_mode", "value"),
     ],
+    prevent_initial_call=True,
 )
 def create_coords_and_map(n_clicks, from_address, to_address, mode):
     """
@@ -144,48 +156,60 @@ def create_coords_and_map(n_clicks, from_address, to_address, mode):
     """
     if n_clicks is None:
         raise PreventUpdate
-    else:
-        if from_address is not None and to_address is not None:
-            source, dest, lons, lats, dtime, meta = get_directions(
-                from_address, to_address, mode
-            )
-            df = pd.DataFrame(
-                {
-                    "lons": lons,
-                    "lats": lats,
-                    # to avoid problems with json
-                    "dtime": dtime.seconds.values,
-                    "source": source,
-                    "destination": dest,
-                }
-            )
-            # Append the elements containing the trajectories
-            trajectory = np.vstack([lats, lons]).T.tolist()
-            start_point = df.source.values[0]
-            end_point = df.destination.values[0]
-            new_children = [
-                dl.Polyline(positions=trajectory),
-                dl.Marker(position=trajectory[0], children=dl.Tooltip(start_point)),
-                dl.Marker(position=trajectory[-1], children=dl.Tooltip(end_point)),
-            ]
-            zoom, center = zoom_center(
-                lats.min(), lats.max(), lons.min(), lons.max(), 200
-            )
-            return (
-                new_children,
-                df.to_json(date_format="iso", orient="split"),
-                dict(center=[center["lat"], center["lon"]], zoom=zoom),
-                f' {meta["duration"]:.1f} min ',
-                f' {meta["distance"]:.1f} km '
-            )
-        else:
-            raise PreventUpdate
+    if from_address is None or to_address is None:
+        return (
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+            no_update,
+            "You have to have both addresses defined",
+            True,
+        )
+
+    source, dest, lons, lats, dtime, meta = get_directions(
+        from_address, to_address, mode
+    )
+    df = pd.DataFrame(
+        {
+            "lons": lons,
+            "lats": lats,
+            # to avoid problems with json
+            "dtime": dtime.seconds.values,
+            "source": source,
+            "destination": dest,
+        }
+    )
+    # Append the elements containing the trajectories
+    trajectory = np.vstack([lats, lons]).T.tolist()
+    start_point = df.source.values[0]
+    end_point = df.destination.values[0]
+    new_children = [
+        dl.Polyline(positions=trajectory),
+        dl.Marker(position=trajectory[0], children=dl.Tooltip(start_point)),
+        dl.Marker(position=trajectory[-1], children=dl.Tooltip(end_point)),
+    ]
+    zoom, center = zoom_center(lats.min(), lats.max(), lons.min(), lons.max(), 200)
+    return (
+        new_children,
+        df.to_json(date_format="iso", orient="split"),
+        dict(center=[center["lat"], center["lon"]], zoom=zoom),
+        f' {meta["duration"]:.1f} min ',
+        f' {meta["distance"]:.1f} km ',
+        None,
+        False,
+    )
 
 
 @callback(
-    [Output("time-plot", "figure"),
-    Output("best-time", "children")],
+    [
+        Output("time-plot", "figure"),
+        Output("best-time", "children"),
+        Output("error-message", "children", allow_duplicate=True),
+        Output("error-modal", "is_open", allow_duplicate=True),
+    ],
     [Input("intermediate-value", "data"), Input("switches-input", "value")],
+    prevent_initial_call=True,
 )
 def create_figure(data, switch):
     """
@@ -194,18 +218,37 @@ def create_figure(data, switch):
     if len(data) > 0:
         df = pd.read_json(io.StringIO(data), orient="split")
         if not df.empty:
-            # convert dtime to timedelta to avoid problems
-            df["dtime"] = pd.to_timedelta(df["dtime"], unit="s")
-            out = get_data(df.lons, df.lats, df.dtime)
-            # Check if there is no rain at all before plotting
-            if (out.sum() < 0.01).all():
-                return make_empty_figure("🎉 Yey, no rain <br>forecast on your ride 🎉"), ""
-            else:
-                min_time = out.sum().idxmin().strftime("%H:%M:%S")
-                if switch == ["time_series"]:
-                    return make_fig_time(out), min_time
+            try:
+                # convert dtime to timedelta to avoid problems
+                df["dtime"] = pd.to_timedelta(df["dtime"], unit="s")
+                out = get_data(df.lons, df.lats, df.dtime)
+                # Check if there is no rain at all before plotting
+                if (out.sum() < 0.01).all():
+                    return (
+                        make_empty_figure(
+                            "🎉 Yey, no rain <br>forecast on your ride 🎉"
+                        ),
+                        "",
+                        None,
+                        False,
+                    )
                 else:
-                    return make_fig_bars(out), min_time
+                    min_time = out.sum().idxmin().strftime("%H:%M:%S")
+                    if switch == ["time_series"]:
+                        return make_fig_time(out), min_time, None, False
+                    else:
+                        return make_fig_bars(out), min_time, None, False
+            except Exception as e:
+                logging.error(
+                    f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}"
+                )
+                return (
+                    no_update,
+                    no_update,
+                    "An error occurred when generating the data, try again",
+                    True,
+                )
+
         else:
             raise PreventUpdate
     raise PreventUpdate
@@ -234,7 +277,10 @@ def show_long_ride_warning(data):
 
 
 @callback(
-    Output(dict(type="searchData", id="departure"), "value", allow_duplicate=True),
+    [
+        Output(dict(type="searchData", id="departure"), "value", allow_duplicate=True),
+        Output({"type": "geolocate", "index": "ride"}, "loading"),
+    ],
     [
         Input("geolocation", "local_date"),  # need it just to force an update!
         Input("geolocation", "position"),
@@ -244,7 +290,7 @@ def show_long_ride_warning(data):
 )
 def update_location(_, pos, n_clicks):
     if pos and n_clicks:
-        return get_place_address_reverse(pos["lon"], pos["lat"])
+        return get_place_address_reverse(pos["lon"], pos["lat"]), False
     raise PreventUpdate
 
 
@@ -254,17 +300,35 @@ def update_location(_, pos, n_clicks):
         Output(
             dict(type="searchData", id="destination"), "value", allow_duplicate=True
         ),
+        Output("error-message", "children", allow_duplicate=True),
+        Output("error-modal", "is_open", allow_duplicate=True),
     ],
     [Input("map", "clickData")],
     prevent_initial_call=True,
 )
 def map_click(clickData):
-    if clickData is not None:
+    if clickData is None:
+        raise PreventUpdate
+    try:
         lat = clickData["latlng"]["lat"]
         lon = clickData["latlng"]["lng"]
         address = get_place_address_reverse(lon, lat)
-        return [dl.Marker(position=[lat, lon], children=dl.Tooltip(address))], address
-    raise PreventUpdate
+        return (
+            [dl.Marker(position=[lat, lon], children=dl.Tooltip(address))],
+            address,
+            None,
+            False,
+        )
+    except Exception as e:
+        logging.error(
+            f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}"
+        )
+        return (
+            no_update,
+            no_update,
+            "You cannot select this location, try again",
+            True,
+        )
 
 
 # @callback(

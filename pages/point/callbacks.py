@@ -7,6 +7,7 @@ from utils.utils import (
     to_rain_rate,
 )
 from utils.openmeteo_api import get_forecast_data
+from utils.settings import logging
 from dash.exceptions import PreventUpdate
 import numpy as np
 import dash_leaflet as dl
@@ -15,9 +16,9 @@ import pandas as pd
 
 
 @callback(
-    Output('list-suggested-inputs', 'children'),
-    Input({"id": 'point-loc', "type": "searchData"}, "value"),
-    State('list-suggested-inputs', 'children'),
+    Output("list-suggested-inputs", "children"),
+    Input({"id": "point-loc", "type": "searchData"}, "value"),
+    State("list-suggested-inputs", "children"),
     prevent_initial_call=True,
 )
 def suggest_locs(value, options):
@@ -39,7 +40,7 @@ def suggest_locs(value, options):
 
 @callback(
     Output("point-cache", "data"),
-    Input({"id": 'point-loc', "type": "searchData"}, "value"),
+    Input({"id": "point-loc", "type": "searchData"}, "value"),
     prevent_initial_call=True,
 )
 def save_address_into_cache(point_address):
@@ -48,7 +49,7 @@ def save_address_into_cache(point_address):
 
 
 @callback(
-    Output({"id": 'point-loc', "type": "searchData"}, "value"),
+    Output({"id": "point-loc", "type": "searchData"}, "value"),
     Input("url", "pathname"),
     State("point-cache", "data"),
 )
@@ -67,9 +68,12 @@ def load_address_from_cache(_, point_cache_data):
         Output("layer-point", "children"),
         Output("intermediate-value-point", "data"),
         Output("map-point", "viewport"),
+        Output("error-message", "children", allow_duplicate=True),
+        Output("error-modal", "is_open", allow_duplicate=True),
     ],
     Input({"type": "generate-button", "index": "point"}, "n_clicks"),
-    State({"id": 'point-loc', "type": "searchData"}, "value"),
+    State({"id": "point-loc", "type": "searchData"}, "value"),
+    prevent_initial_call=True,
 )
 def create_coords_and_map(n_clicks, point_address):
     """
@@ -78,87 +82,118 @@ def create_coords_and_map(n_clicks, point_address):
     """
     if n_clicks is None:
         raise PreventUpdate
-    else:
-        if point_address is not None:
-            place_name, place_center = get_place_address(point_address, limit=1)
-            lon, lat = place_center
-            new_children = [
-                dl.Marker(position=[lat, lon], children=dl.Tooltip(place_name)),
-            ]
-            return (
-                new_children,
-                {"place_name": place_name, "lon": lon, "lat": lat},
-                dict(center=[lat, lon], zoom=9),
-            )
-        else:
-            raise PreventUpdate
+    if point_address is None:
+        raise PreventUpdate
+
+    try:
+        place_name, place_center = get_place_address(point_address, limit=1)
+    except Exception as e:
+        logging.error(
+            f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}"
+        )
+        return (
+            no_update,
+            no_update,
+            no_update,
+            "An error occurred when finding the address",
+            True,
+        )
+    lon, lat = place_center
+    new_children = [
+        dl.Marker(position=[lat, lon], children=dl.Tooltip(place_name)),
+    ]
+    return (
+        new_children,
+        {"place_name": place_name, "lon": lon, "lat": lat},
+        dict(center=[lat, lon], zoom=9),
+        None,
+        False,
+    )
 
 
 @callback(
-    Output("time-plot-point", "figure"),
+    [
+        Output("time-plot-point", "figure"),
+        Output("error-message", "children", allow_duplicate=True),
+        Output("error-modal", "is_open", allow_duplicate=True),
+    ],
     Input("intermediate-value-point", "data"),
+    prevent_initial_call=True,
 )
 def create_figure(data):
     """
     Create the main figure with the results
     """
     if len(data) > 0:
-        lon_radar, lat_radar, time_radar, _, rr = get_radar_data()
-        dist = distance_km(lon_radar, data["lon"], lat_radar, data["lat"])
-        min_indices = np.unravel_index(dist.argmin(), dist.shape)
-        rain_time = to_rain_rate(rr[:, min_indices[0], min_indices[1]])
-        # Get forecast data as well
-        forecast = get_forecast_data(
-            latitude=data["lat"],
-            longitude=data["lon"],
-            from_time=time_radar.min() - pd.to_timedelta("10 min"),
-            to_time=time_radar.max() + pd.to_timedelta("2h"),
-        )
-        # Convert value from mm / 15 min to mm / h
-        forecast["precipitation"] = forecast["precipitation"] * 4
+        try:
+            lon_radar, lat_radar, time_radar, _, rr = get_radar_data()
+            dist = distance_km(lon_radar, data["lon"], lat_radar, data["lat"])
+            min_indices = np.unravel_index(dist.argmin(), dist.shape)
+            rain_time = to_rain_rate(rr[:, min_indices[0], min_indices[1]])
+            # Get forecast data as well
+            forecast = get_forecast_data(
+                latitude=data["lat"],
+                longitude=data["lon"],
+                from_time=time_radar.min() - pd.to_timedelta("10 min"),
+                to_time=time_radar.max() + pd.to_timedelta("2h"),
+            )
+            # Convert value from mm / 15 min to mm / h
+            forecast["precipitation"] = forecast["precipitation"] * 4
 
-        fig = go.Figure(
-            data=[
-                go.Scatter(
-                    x=time_radar,
-                    y=rain_time,
-                    mode="markers+lines",
-                    fill="tozeroy",
-                    name="radar forecast",
+            fig = go.Figure(
+                data=[
+                    go.Scatter(
+                        x=time_radar,
+                        y=rain_time,
+                        mode="markers+lines",
+                        fill="tozeroy",
+                        name="radar forecast",
+                    ),
+                    go.Scatter(
+                        x=forecast["time"],
+                        y=forecast["precipitation"],
+                        mode="markers+lines",
+                        fill="tozeroy",
+                        name="model forecast",
+                    ),
+                ]
+            )
+
+            fig.update_layout(
+                legend_orientation="h",
+                xaxis=dict(title="", rangemode="tozero"),
+                yaxis=dict(
+                    title="Precipitation [mm/h]", rangemode="tozero", fixedrange=True
                 ),
-                go.Scatter(
-                    x=forecast["time"],
-                    y=forecast["precipitation"],
-                    mode="markers+lines",
-                    fill="tozeroy",
-                    name="model forecast",
+                # height=390,
+                margin={"r": 5, "t": 5, "l": 5, "b": 0},
+                template="plotly_white",
+                legend=dict(
+                    orientation="h", yanchor="top", y=0.99, xanchor="right", x=0.99
                 ),
-            ]
-        )
+            )
 
-        fig.update_layout(
-            legend_orientation="h",
-            xaxis=dict(title="", rangemode="tozero"),
-            yaxis=dict(
-                title="Precipitation [mm/h]", rangemode="tozero", fixedrange=True
-            ),
-            # height=390,
-            margin={"r": 5, "t": 5, "l": 5, "b": 0},
-            template="plotly_white",
-            legend=dict(
-                orientation="h", yanchor="top", y=0.99, xanchor="right", x=0.99
-            ),
-        )
-
-        return fig
+            return fig, None, False
+        except Exception as e:
+            logging.error(
+                f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}"
+            )
+            return (
+                no_update,
+                "An error occurred when generating the data, try again",
+                True,
+            )
     raise PreventUpdate
 
 
 @callback(
     [
-        Output({"id": 'point-loc', "type": "searchData"}, "value", allow_duplicate=True),
+        Output(
+            {"id": "point-loc", "type": "searchData"}, "value", allow_duplicate=True
+        ),
         Output("layer-point", "children", allow_duplicate=True),
         Output("map-point", "viewport", allow_duplicate=True),
+        Output({"type": "geolocate", "index": "point"}, "loading"),
     ],
     Input("geolocation", "local_date"),  # need it just to force an update!
     [
@@ -182,6 +217,7 @@ def update_location(_, pos, n_clicks):
                 )
             ],
             dict(center=[pos["lat"], pos["lon"]], zoom=8),
+            False,
         )
     raise PreventUpdate
 
@@ -189,28 +225,45 @@ def update_location(_, pos, n_clicks):
 @callback(
     [
         Output("layer-point", "children", allow_duplicate=True),
-        Output({"id": 'point-loc', "type": "searchData"}, "value", allow_duplicate=True),
+        Output(
+            {"id": "point-loc", "type": "searchData"}, "value", allow_duplicate=True
+        ),
+        Output("error-message", "children", allow_duplicate=True),
+        Output("error-modal", "is_open", allow_duplicate=True),
     ],
     Input("map-point", "clickData"),
     prevent_initial_call=True,
 )
 def map_click(clickData):
     if clickData is not None:
-        lat = clickData["latlng"]["lat"]
-        lon = clickData["latlng"]["lng"]
-        address = get_place_address_reverse(lon, lat)
-        return (
-            [dl.Marker(position=[lat, lon], children=dl.Tooltip(address))],
-            address
-        )
+        try:
+            lat = clickData["latlng"]["lat"]
+            lon = clickData["latlng"]["lng"]
+            address = get_place_address_reverse(lon, lat)
+            return (
+                [dl.Marker(position=[lat, lon], children=dl.Tooltip(address))],
+                address,
+                None,
+                False,
+            )
+        except Exception as e:
+            logging.error(
+                f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}"
+            )
+            return (
+                no_update,
+                no_update,
+                "You cannot select this location, try again",
+                True,
+            )
 
     raise PreventUpdate
 
 
 @callback(
-    Output({"id": 'point-loc', "type": "searchData"}, "value", allow_duplicate=True),
+    Output({"id": "point-loc", "type": "searchData"}, "value", allow_duplicate=True),
     Input("clear-button", "n_clicks"),
-    prevent_initial_call=True
+    prevent_initial_call=True,
 )
 def clear_input(n_clicks):
     if n_clicks:
