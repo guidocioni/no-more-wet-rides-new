@@ -7,6 +7,7 @@ from utils.utils import (
     to_rain_rate,
 )
 from utils.openmeteo_api import get_forecast_data
+from utils.rainviewer_api import get_forecast as get_forecast_rainviewer
 from utils.settings import logging
 from dash.exceptions import PreventUpdate
 import numpy as np
@@ -139,7 +140,20 @@ def create_figure(data):
             )
             # Convert value from mm / 15 min to mm / h
             forecast["precipitation"] = forecast["precipitation"] * 4
-
+            # Get forecast from rainviewer
+            forecast_rainviewer = get_forecast_rainviewer(
+                latitude=data["lat"],
+                longitude=data["lon"],
+                days=1,
+                hours=1,
+                timezone=1,
+                nowcast=120,
+                nowcast_step=300,
+                radar_info=1,
+                probability=1,
+            )
+            forecast_rainviewer = forecast_rainviewer['nowcast']
+            forecast_rainviewer['time'] = forecast_rainviewer['time'].dt.tz_localize(None)
             fig = go.Figure(
                 data=[
                     go.Scatter(
@@ -147,14 +161,21 @@ def create_figure(data):
                         y=rain_time,
                         mode="markers+lines",
                         fill="tozeroy",
-                        name="radar forecast",
+                        name="RADOLAN",
                     ),
                     go.Scatter(
                         x=forecast["time"],
                         y=forecast["precipitation"],
                         mode="markers+lines",
                         fill="tozeroy",
-                        name="model forecast",
+                        name="NWP",
+                    ),
+                    go.Scatter(
+                        x=forecast_rainviewer["time"],
+                        y=forecast_rainviewer["precipitation"],
+                        mode="markers+lines",
+                        fill="tozeroy",
+                        name="Rainviewer",
                     ),
                 ]
             )

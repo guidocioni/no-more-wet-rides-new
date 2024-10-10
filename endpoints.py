@@ -77,9 +77,6 @@ def pointsummary():
 
     if point_address:
         start_time = time.perf_counter()
-        logging.info(
-            f"Making request to pointsummary with point_address={point_address}"
-        )
         place_name, place_center = get_place_address(point_address, limit=1)
         lon, lat = place_center
         lon_radar, lat_radar, time_radar, _, rr = get_radar_data()
@@ -173,7 +170,7 @@ def pointsummary():
         end_time = time.perf_counter()
         total_time = end_time - start_time
         logging.info(
-            f"Making request to ridequery with point_address={point_address} took {total_time:.2f} seconds"
+            f"Making request to pointsummary with point_address={point_address} took {total_time:.2f} seconds"
         )
 
         return resp

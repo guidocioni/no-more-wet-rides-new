@@ -92,11 +92,13 @@ def get_directions(
 
 
 @cache.memoize(900)
-def get_place_address(place, country='de,fr,ch,at', limit=5, language=None):
+def get_place_address(place, 
+                      country=None, # 'de,fr,ch,at'
+                      limit=5,
+                      language=None):
     url = f"{APIURL_PLACES}/{place}.json"
 
     payload = {
-        'country': country,
         'access_token': apiKey,
         'limit': limit,
         'proximity': 'ip'
@@ -104,6 +106,8 @@ def get_place_address(place, country='de,fr,ch,at', limit=5, language=None):
 
     if language:
         payload['language'] = language
+    if country:
+        payload['country'] = country
 
     response = requests.get(url, params=payload)
     json_data = json.loads(response.text)
@@ -123,15 +127,22 @@ def get_place_address(place, country='de,fr,ch,at', limit=5, language=None):
 
 
 @cache.memoize(900)
-def get_place_address_reverse(lon, lat, country='de,fr,ch,at', limit=1, language='de'):
+def get_place_address_reverse(lon, lat,
+                              country=None,
+                              limit=1,
+                              language=None):
     url = f"{APIURL_PLACES}/{lon},{lat}.json"
 
     payload = {
-        'country': country,
         'access_token': apiKey,
         'language': language,
         'limit': limit
     }
+
+    if country:
+        payload['country'] = country
+    if language:
+        payload['language'] = language
 
     response = requests.get(url, params=payload)
     json_data = json.loads(response.text)
