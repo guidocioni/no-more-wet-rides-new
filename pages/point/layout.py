@@ -3,6 +3,7 @@ import dash_mantine_components as dmc
 from dash_iconify import DashIconify
 from dash import dcc, html, register_page
 from utils.settings import mapURL, attribution
+from utils.rainviewer_api import get_radar_latest_tile_url
 from .callbacks import *
 import dash_leaflet as dl
 
@@ -97,6 +98,17 @@ map_card = dbc.Card(
                                     transparent=True,
                                     opacity=0.7,
                                     version="1.3.0",
+                                    detectRetina=True,
+                                ),
+                            ),
+                            dl.Overlay(
+                                name="Rain Radar",
+                                checked=True,
+                                children=dl.TileLayer(
+                                    id="rainradar-layer",
+                                    url=get_radar_latest_tile_url(),
+                                    opacity=0.7,
+                                    tileSize=256,
                                     detectRetina=True,
                                 ),
                             ),

@@ -7,6 +7,7 @@ import os
 # Configuration
 BASE_URL = "https://api.rainviewer.com"
 ENDPOINT = "/private/forecast/{lat_lon}"
+MAPS_ENDPOINT = "/private/maps"
 
 # Function to fetch the forecast
 def get_forecast(latitude, longitude, days=1, hours=0, nowcast=60, nowcast_past=0, 
@@ -121,3 +122,87 @@ forecast_data = get_forecast(latitude, longitude, days=1, hours=1, timezone=1,
 forecast_data = process_forecast_data(forecast_data)
 forecast_data['nowcast']
 '''
+
+
+def get_radar_tile_urls(type='radar', interval=3600, step=300, nowcast_interval=600, nwp_layers=0,
+                        allow_custom_step=0, tile_size=256, color=6, smooth=0, snow=1):
+    """
+    Fetches the latest radar tile URL for use with a Dash Leaflet overlay component.
+    
+    Args:
+    - type (str): the type of tiles to fetch. Can be radar, satellite, satprecip, nwpprecip, or nwptemp.
+    - interval (int): Interval of past map frames in seconds. Supported values: 3600, 7200, 10800, 21600, 43200, 86400, 172800.
+      Default is 3600, representing one hour.
+    - step (int): Step size for map frames in all sections, in seconds. Supported values: 300 (5 minutes) or 600 (10 minutes). 
+      Default is 300.
+    - nowcast_interval (int): Interval of nowcast (forecast) map frames in seconds. 
+      Default is 0 (disables nowcast frames in the response).
+    - nwp_layers (int): Flag to include NWP layers for precipitation and temperature. 
+      1 enables NWP layers, and 0 disables them. Default is 0.
+    - allow_custom_step (int): Flag to remove step limits for intervals <= 12 hours. 
+      1 allows custom step values, and 0 keeps standard steps. Default is 0.
+    - tile_size: either 256 or 512 px
+    - color: the number of color scheme.
+            0	BW Black and White: dBZ value
+            1	Original
+            2	Universal Blue
+            3	TITAN
+            4	The Weather Channel (TWC)
+            5	Meteored
+            6	NEXRAD Level III
+            7	Rainbow @ SELEX-IS
+            8	Dark Sky
+    - smooth: 1 smooth the data, 0 does not smooth the data
+    - snow: 1 also plot snow, 0 does not plot snow
+
+    Returns:
+    - str: URL for the latest radar tile image, or None if unavailable.
+    """
+    headers = {
+        "x-api-key": os.getenv('RAINVIEWER_API_KEY')
+    }
+    
+    # Pass parameters to request
+    params = {
+        "interval": interval,
+        "step": step,
+        "nowcast_interval": nowcast_interval,
+        "nwp_layers": nwp_layers,
+        "allow_custom_step": allow_custom_step
+    }
+    
+    try:
+        # Make a request to the /private/maps endpoint
+        response = requests.get(f"{BASE_URL}{MAPS_ENDPOINT}", headers=headers, params=params)
+        response.raise_for_status()
+        
+        # Parse response JSON
+        data = response.json()
+        if data.get("code") != 0:
+            print("Error:", data.get("message"))
+            return None
+        data= data['data']
+        for category, timeframes in data.items():
+            for timeframe, items in timeframes.items():
+                for item in items:
+                    # Construct the URL and add it to the item
+                    item["url"] = f"https://tilecache.rainviewer.com/v2/radar/{item['path']}/{tile_size}/{{z}}/{{x}}/{{y}}/{color}/{smooth}_{snow}.png"
+                    item["date"] = pd.to_datetime(item["time"], unit="s")
+        return data
+
+    except requests.exceptions.RequestException as e:
+        print(f"Request failed: {e}")
+        return None
+
+
+def get_radar_latest_tile_url():
+    data = get_radar_tile_urls(type='radar', interval=3600, step=300, nowcast_interval=600, nwp_layers=0,
+                        allow_custom_step=0, tile_size=256, color=6, smooth=0, snow=1)
+    # Extract radar data and get the latest frame
+    radar_frames = data["radar"]["past"]
+    latest_frame = radar_frames[-1] if radar_frames else None
+    
+    if latest_frame:
+        return latest_frame['url']
+    else:
+        return None
