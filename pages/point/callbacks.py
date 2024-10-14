@@ -8,6 +8,7 @@ from utils.utils import (
 )
 from utils.openmeteo_api import get_forecast_data
 from utils.rainviewer_api import get_forecast as get_forecast_rainviewer
+from utils.rainbow_weather_api import RainbowAI
 from utils.settings import logging
 from dash.exceptions import PreventUpdate
 import numpy as np
@@ -153,7 +154,17 @@ def create_figure(data):
                 probability=1,
             )
             forecast_rainviewer = forecast_rainviewer['nowcast']
+            # Save timezone to convert other data
+            tz = forecast_rainviewer['time'].dt.tz
             forecast_rainviewer['time'] = forecast_rainviewer['time'].dt.tz_localize(None)
+            # Get forecast from rainbow weather
+            rainbow_api = RainbowAI()
+            # Example usage to get weather info
+            weather_info = rainbow_api.get_weather_info()
+            # Example usage to get forecast by location
+            snapshot_timestamp = weather_info['precipitation']['snapshot_timestamp']  # Example timestamp
+            forecast_rainbow = rainbow_api.get_forecast_by_location(snapshot_timestamp, 7200, data["lon"], data["lat"])
+            forecast_rainbow['timestampBegin'] = forecast_rainbow['timestampBegin'].dt.tz_convert(tz).dt.tz_localize(None)
             fig = go.Figure(
                 data=[
                     go.Scatter(
@@ -176,6 +187,13 @@ def create_figure(data):
                         mode="markers+lines",
                         fill="tozeroy",
                         name="Rainviewer",
+                    ),
+                    go.Scatter(
+                        x=forecast_rainbow["timestampBegin"],
+                        y=forecast_rainbow["precipRate"],
+                        mode="markers+lines",
+                        fill="tozeroy",
+                        name="Rainbow",
                     ),
                 ]
             )
