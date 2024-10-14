@@ -126,16 +126,16 @@ def refresh_wms(n_intervals):
 
 
 @callback(
-    Output("rainradar-layer", "params"),
-    Input("interval-wms-refresh", "n_intervals"),
-    prevent_initial_call=True,
+    Output("rainradar-layer", "url"),
+    [Input("interval-wms-refresh", "n_intervals"),
+     Input("url", "pathname")],
 )
-def refresh_rainradar_tiles(n_intervals):
+def refresh_rainradar_tiles(n_intervals, path):
     """
-    Refresh WMS tiles with interval
+    Refresh rainviewer tiles with interval
     """
-    if n_intervals > 0:
-        return dict(url=get_radar_latest_tile_url())
+    url = get_radar_latest_tile_url()
+    return url
 
 
 @callback(
