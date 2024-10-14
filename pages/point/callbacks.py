@@ -159,9 +159,7 @@ def create_figure(data):
             forecast_rainviewer['time'] = forecast_rainviewer['time'].dt.tz_localize(None)
             # Get forecast from rainbow weather
             rainbow_api = RainbowAI()
-            # Example usage to get weather info
             weather_info = rainbow_api.get_weather_info()
-            # Example usage to get forecast by location
             snapshot_timestamp = weather_info['precipitation']['snapshot_timestamp']  # Example timestamp
             forecast_rainbow = rainbow_api.get_forecast_by_location(snapshot_timestamp, 7200, data["lon"], data["lat"])
             forecast_rainbow['timestampBegin'] = forecast_rainbow['timestampBegin'].dt.tz_convert(tz).dt.tz_localize(None)

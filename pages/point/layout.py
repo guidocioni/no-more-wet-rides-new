@@ -17,8 +17,8 @@ controls = dbc.Card(
             id={"type": "geolocate", "index": "point"},
             leftSection=DashIconify(icon="ion:location-outline", width=20),
             className="col-12 mb-1",
-            size='xs',
-            color='gray',
+            size="xs",
+            color="gray",
         ),
         html.Datalist(
             id="list-suggested-inputs",
@@ -66,12 +66,18 @@ map_card = dbc.Card(
                             dl.BaseLayer(
                                 name="Map",
                                 checked=True,
-                                children=dl.TileLayer(
-                                    url=mapURL,
-                                    attribution=attribution,
-                                    tileSize=512,
-                                    zoomOffset=-1,
-                                ),
+                                children=[
+                                    dl.TileLayer(
+                                        url=mapURL,
+                                        attribution=attribution,
+                                        tileSize=512,
+                                        zoomOffset=-1,
+                                    ),
+                            dl.GeoJSON(
+                                        url="https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson",
+                                        options=dict(style=dict(color="white", weight=0.5, opacity=0.6, fillOpacity=0)),
+                                    )
+                                ],
                             ),
                             dl.Overlay(
                                 name="Satellite (HR)",
@@ -102,7 +108,7 @@ map_card = dbc.Card(
                                 ),
                             ),
                             dl.Overlay(
-                                name="Radar",
+                                name="RADOLAN",
                                 checked=True,
                                 children=dl.WMSTileLayer(
                                     id="wms-layer",
