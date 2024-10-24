@@ -125,7 +125,7 @@ forecast_data['nowcast']
 
 
 def get_radar_tile_urls(type='radar', interval=3600, step=300, nowcast_interval=600, nwp_layers=0,
-                        allow_custom_step=0, tile_size=256, color=6, smooth=0, snow=1):
+                        allow_custom_step=0, tile_size=256, color=6, smooth=0, snow=1, minimum_dbz=15):
     """
     Fetches the latest radar tile URL for use with a Dash Leaflet overlay component.
     
@@ -170,6 +170,9 @@ def get_radar_tile_urls(type='radar', interval=3600, step=300, nowcast_interval=
         "nwp_layers": nwp_layers,
         "allow_custom_step": allow_custom_step
     }
+
+    if minimum_dbz:
+        minimum_dbz += 32
     
     try:
         # Make a request to the /private/maps endpoint
@@ -186,7 +189,7 @@ def get_radar_tile_urls(type='radar', interval=3600, step=300, nowcast_interval=
             for timeframe, items in timeframes.items():
                 for item in items:
                     # Construct the URL and add it to the item
-                    item["url"] = f"https://tilecache.rainviewer.com/v2/radar/{item['path']}/{tile_size}/{{z}}/{{x}}/{{y}}/{color}/{smooth}_{snow}.png"
+                    item["url"] = f"https://tilecache.rainviewer.com/v2/{type}/{item['path']}/{tile_size}/{{z}}/{{x}}/{{y}}/{color}/{smooth}_{snow}_1_{minimum_dbz}.png"
                     item["date"] = pd.to_datetime(item["time"], unit="s")
         return data
 
@@ -195,11 +198,11 @@ def get_radar_tile_urls(type='radar', interval=3600, step=300, nowcast_interval=
         return None
 
 
-def get_radar_latest_tile_url():
-    data = get_radar_tile_urls(type='radar', interval=3600, step=300, nowcast_interval=600, nwp_layers=0,
+def get_radar_latest_tile_url(type='radar'):
+    data = get_radar_tile_urls(type=type, interval=3600, step=300, nowcast_interval=600, nwp_layers=0,
                         allow_custom_step=0, tile_size=256, color=6, smooth=0, snow=1)
     # Extract radar data and get the latest frame
-    radar_frames = data["radar"]["past"]
+    radar_frames = data[type]["past"]
     latest_frame = radar_frames[-1] if radar_frames else None
     
     if latest_frame:

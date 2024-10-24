@@ -72,11 +72,17 @@ map_card = dbc.Card(
                                         attribution=attribution,
                                         tileSize=512,
                                         zoomOffset=-1,
-                                    ),
-                            dl.GeoJSON(
-                                        url="https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson",
-                                        options=dict(style=dict(color="white", weight=0.5, opacity=0.6, fillOpacity=0)),
                                     )
+                                ],
+                            ),
+                            dl.Overlay(
+                                name="Countries",
+                                checked=True,
+                                children=[
+                                    dl.GeoJSON(
+                                            url="https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson",
+                                            options=dict(style=dict(color="white", weight=0.5, opacity=0.6, fillOpacity=0)),
+                                        )
                                 ],
                             ),
                             dl.Overlay(
@@ -95,7 +101,7 @@ map_card = dbc.Card(
                             ),
                             dl.Overlay(
                                 name="Satellite (LR)",
-                                checked=False,
+                                checked=True,
                                 children=dl.WMSTileLayer(
                                     id="wms-layer-sat",
                                     url="https://view.eumetsat.int/geoserver/ows?",
@@ -109,7 +115,7 @@ map_card = dbc.Card(
                             ),
                             dl.Overlay(
                                 name="RADOLAN",
-                                checked=True,
+                                checked=False,
                                 children=dl.WMSTileLayer(
                                     id="wms-layer",
                                     url="https://maps.dwd.de/geoserver/ows?",
@@ -122,11 +128,22 @@ map_card = dbc.Card(
                                 ),
                             ),
                             dl.Overlay(
-                                name="Rain Radar",
+                                name="RainViewer (radar)",
                                 checked=True,
                                 children=dl.TileLayer(
                                     id="rainradar-layer",
                                     url=get_radar_latest_tile_url(),
+                                    opacity=0.7,
+                                    tileSize=256,
+                                    detectRetina=True,
+                                ),
+                            ),
+                            dl.Overlay(
+                                name="RainViewer (sat)",
+                                checked=False,
+                                children=dl.TileLayer(
+                                    id="rainradar-layer-sat",
+                                    url=get_radar_latest_tile_url(type='satprecip'),
                                     opacity=0.7,
                                     tileSize=256,
                                     detectRetina=True,

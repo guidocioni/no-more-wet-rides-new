@@ -163,6 +163,9 @@ def create_figure(data):
             snapshot_timestamp = weather_info['precipitation']['snapshot_timestamp']  # Example timestamp
             forecast_rainbow = rainbow_api.get_forecast_by_location(snapshot_timestamp, 7200, data["lon"], data["lat"])
             forecast_rainbow['timestampBegin'] = forecast_rainbow['timestampBegin'].dt.tz_convert(tz).dt.tz_localize(None)
+            forecast_rainbow = forecast_rainbow.resample('5min',on="timestampBegin").agg({'precipRate':'sum',
+                                                            'precipType':'first'}).reset_index()
+            forecast_rainbow = forecast_rainbow[forecast_rainbow.timestampBegin >= forecast_rainviewer['time'].min()]
             fig = go.Figure(
                 data=[
                     go.Scatter(

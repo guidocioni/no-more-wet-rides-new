@@ -126,7 +126,7 @@ def refresh_wms(n_intervals):
 
 
 @callback(
-    Output("rainradar-layer", "url"),
+    [Output("rainradar-layer", "url"),Output("rainradar-layer-sat", "url")],
     [Input("interval-wms-refresh", "n_intervals"),
      Input("url", "pathname")],
 )
@@ -134,8 +134,7 @@ def refresh_rainradar_tiles(n_intervals, path):
     """
     Refresh rainviewer tiles with interval
     """
-    url = get_radar_latest_tile_url()
-    return url
+    return get_radar_latest_tile_url(), get_radar_latest_tile_url(type='satprecip')
 
 
 @callback(
