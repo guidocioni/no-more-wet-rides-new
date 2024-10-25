@@ -113,16 +113,14 @@ def toggle_fade(n):
 
 
 @callback(
-    Output("wms-layer", "params"),
+    [Output("wms-layer", "params"),Output("wms-layer-sat-hr", "params"),Output("wms-layer-sat-lr", "params")],
     Input("interval-wms-refresh", "n_intervals"),
-    prevent_initial_call=True,
 )
 def refresh_wms(n_intervals):
     """
     Refresh WMS tiles with interval
     """
-    if n_intervals > 0:
-        return dict(cache=int(time.time()))
+    return [dict(cache=int(time.time()))] * 3
 
 
 @callback(
