@@ -124,106 +124,124 @@ def create_coords_and_map(n_clicks, point_address):
 )
 def create_figure(data):
     """
-    Create the main figure with the results
+    Create the main figure with the results.
+    Each data source is processed in its own try/except block.
     """
-    if len(data) > 0:
-        try:
-            lon_radar, lat_radar, time_radar, _, rr = get_radar_data()
-            dist = distance_km(lon_radar, data["lon"], lat_radar, data["lat"])
-            min_indices = np.unravel_index(dist.argmin(), dist.shape)
-            rain_time = to_rain_rate(rr[:, min_indices[0], min_indices[1]])
-            # Get forecast data as well
-            forecast = get_forecast_data(
-                latitude=data["lat"],
-                longitude=data["lon"],
-                from_time=time_radar.min() - pd.to_timedelta("10 min"),
-                to_time=time_radar.max() + pd.to_timedelta("2h"),
-            )
-            # Convert value from mm / 15 min to mm / h
-            forecast["precipitation"] = forecast["precipitation"] * 4
-            # Get forecast from rainviewer
-            forecast_rainviewer = get_forecast_rainviewer(
-                latitude=data["lat"],
-                longitude=data["lon"],
-                days=1,
-                hours=1,
-                timezone=1,
-                nowcast=120,
-                nowcast_step=300,
-                radar_info=1,
-                probability=1,
-            )
-            forecast_rainviewer = forecast_rainviewer['nowcast']
-            # Save timezone to convert other data
-            tz = forecast_rainviewer['time'].dt.tz
-            forecast_rainviewer['time'] = forecast_rainviewer['time'].dt.tz_localize(None)
-            # Get forecast from rainbow weather
-            rainbow_api = RainbowAI()
-            weather_info = rainbow_api.get_weather_info()
-            snapshot_timestamp = weather_info['precipitation']['snapshot_timestamp']  # Example timestamp
-            forecast_rainbow = rainbow_api.get_forecast_by_location(snapshot_timestamp, 7200, data["lon"], data["lat"])
-            forecast_rainbow['timestampBegin'] = forecast_rainbow['timestampBegin'].dt.tz_convert(tz).dt.tz_localize(None)
-            forecast_rainbow = forecast_rainbow.resample('5min',on="timestampBegin").agg({'precipRate':'sum',
-                                                            'precipType':'first'}).reset_index()
-            forecast_rainbow = forecast_rainbow[forecast_rainbow.timestampBegin >= forecast_rainviewer['time'].min()]
-            fig = go.Figure(
-                data=[
-                    go.Scatter(
-                        x=time_radar,
-                        y=rain_time,
-                        mode="markers+lines",
-                        fill="tozeroy",
-                        name="RADOLAN",
-                    ),
-                    go.Scatter(
-                        x=forecast["time"],
-                        y=forecast["precipitation"],
-                        mode="markers+lines",
-                        fill="tozeroy",
-                        name="NWP",
-                    ),
-                    go.Scatter(
-                        x=forecast_rainviewer["time"],
-                        y=forecast_rainviewer["precipitation"],
-                        mode="markers+lines",
-                        fill="tozeroy",
-                        name="Rainviewer",
-                    ),
-                    go.Scatter(
-                        x=forecast_rainbow["timestampBegin"],
-                        y=forecast_rainbow["precipRate"],
-                        mode="markers+lines",
-                        fill="tozeroy",
-                        name="Rainbow",
-                    ),
-                ]
-            )
+    if len(data) <= 0:
+        raise PreventUpdate
 
-            fig.update_layout(
-                legend_orientation="h",
-                xaxis=dict(title="", rangemode="tozero"),
-                yaxis=dict(
-                    title="Precipitation [mm/h]", rangemode="tozero", fixedrange=True
-                ),
-                # height=390,
-                margin={"r": 5, "t": 5, "l": 5, "b": 0},
-                template="plotly_white",
-                legend=dict(
-                    orientation="h", yanchor="top", y=0.99, xanchor="right", x=0.99
-                ),
-            )
+    fig = go.Figure()
 
-            return fig, None, False
-        except Exception as e:
-            logging.error(
-                f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}"
-            )
-            return (
-                no_update,
-                "An error occurred when generating the data, try again",
-                True,
-            )
-    raise PreventUpdate
+    # RADOLAN trace
+    try:
+        lon_radar, lat_radar, time_radar, _, rr = get_radar_data()
+        dist = distance_km(lon_radar, data["lon"], lat_radar, data["lat"])
+        min_indices = np.unravel_index(dist.argmin(), dist.shape)
+        rain_time = to_rain_rate(rr[:, min_indices[0], min_indices[1]])
+        fig.add_trace(go.Scatter(
+            x=time_radar,
+            y=rain_time,
+            mode="markers+lines",
+            fill="tozeroy",
+            name="RADOLAN",
+        ))
+    except Exception as e:
+        logging.error(f"RADOLAN trace error at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
+
+    # NWP trace
+    try:
+        # Retrieve time_radar independently for NWP forecast limits
+        _, _, time_radar, _, _ = get_radar_data()
+        forecast = get_forecast_data(
+            latitude=data["lat"],
+            longitude=data["lon"],
+            from_time=time_radar.min() - pd.to_timedelta("10 min"),
+            to_time=time_radar.max() + pd.to_timedelta("2h"),
+        )
+        forecast["precipitation"] = forecast["precipitation"] * 4
+        fig.add_trace(go.Scatter(
+            x=forecast["time"],
+            y=forecast["precipitation"],
+            mode="markers+lines",
+            fill="tozeroy",
+            name="NWP",
+        ))
+    except Exception as e:
+        logging.error(f"NWP trace error at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
+
+    # Rainviewer trace
+    try:
+        forecast_rainviewer = get_forecast_rainviewer(
+            latitude=data["lat"],
+            longitude=data["lon"],
+            days=1,
+            hours=1,
+            timezone=1,
+            nowcast=120,
+            nowcast_step=300,
+            radar_info=1,
+            probability=1,
+        )
+        forecast_rainviewer = forecast_rainviewer['nowcast']
+        tz = forecast_rainviewer['time'].dt.tz
+        forecast_rainviewer['time'] = forecast_rainviewer['time'].dt.tz_localize(None)
+        fig.add_trace(go.Scatter(
+            x=forecast_rainviewer["time"],
+            y=forecast_rainviewer["precipitation"],
+            mode="markers+lines",
+            fill="tozeroy",
+            name="Rainviewer",
+        ))
+    except Exception as e:
+        logging.error(f"Rainviewer trace error at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
+
+    # Rainbow trace
+    try:
+        # Retrieve a fresh tz reference by calling forecast_rainviewer within this block
+        forecast_rainviewer_tmp = get_forecast_rainviewer(
+            latitude=data["lat"],
+            longitude=data["lon"],
+            days=1,
+            hours=1,
+            timezone=1,
+            nowcast=120,
+            nowcast_step=300,
+            radar_info=1,
+            probability=1,
+        )['nowcast']
+        tz = forecast_rainviewer_tmp['time'].dt.tz
+
+        rainbow_api = RainbowAI()
+        weather_info = rainbow_api.get_weather_info()
+        snapshot_timestamp = weather_info['precipitation']['snapshot_timestamp']
+        forecast_rainbow = rainbow_api.get_forecast_by_location(snapshot_timestamp, 7200, data["lon"], data["lat"])
+        forecast_rainbow['timestampBegin'] = forecast_rainbow['timestampBegin'].dt.tz_convert(tz).dt.tz_localize(None)
+        forecast_rainbow = forecast_rainbow.resample('5min', on="timestampBegin").agg({
+            'precipRate':'sum',
+            'precipType':'first'
+        }).reset_index()
+        forecast_rainbow = forecast_rainbow[forecast_rainbow.timestampBegin >= forecast_rainviewer_tmp['time'].min()]
+        fig.add_trace(go.Scatter(
+            x=forecast_rainbow["timestampBegin"],
+            y=forecast_rainbow["precipRate"],
+            mode="markers+lines",
+            fill="tozeroy",
+            name="Rainbow",
+        ))
+    except Exception as e:
+        logging.error(f"Rainbow trace error at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
+
+    # Figure layout settings (unchanged)
+    fig.update_layout(
+        legend_orientation="h",
+        xaxis=dict(title="", rangemode="tozero"),
+        yaxis=dict(title="Precipitation [mm/h]", rangemode="tozero", fixedrange=True),
+        margin={"r": 5, "t": 5, "l": 5, "b": 0},
+        template="plotly_white",
+        legend=dict(orientation="h", yanchor="top", y=0.99, xanchor="right", x=0.99),
+    )
+
+    return fig, None, False
 
 
 @callback(
