@@ -72,6 +72,7 @@ map_card = dbc.Card(
                                         attribution=attribution,
                                         tileSize=512,
                                         zoomOffset=-1,
+                                        opacity=1.0,  # Add explicit opacity
                                     )
                                 ],
                             ),
@@ -88,16 +89,18 @@ map_card = dbc.Card(
                             dl.Overlay(
                                 name="Satellite (HR)",
                                 checked=False,
-                                children=dl.WMSTileLayer(
-                                    id="wms-layer-sat-hr",
-                                    url="https://view.eumetsat.int/geoserver/ows?",
-                                    layers="mtg_fd:vis06_hrfi",
-                                    format="image/png",
-                                    transparent=True,
-                                    opacity=0.9,
-                                    version="1.3.0",
-                                    detectRetina=True,
-                                ),
+                                children=[  # Add list brackets here
+                                    dl.WMSTileLayer(
+                                        id="wms-layer-sat-hr",
+                                        url="https://view.eumetsat.int/geoserver/ows?",
+                                        layers="mtg_fd:vis06_hrfi",
+                                        format="image/png",
+                                        transparent=True,
+                                        opacity=0.9,
+                                        version="1.3.0",
+                                        detectRetina=True,
+                                    )
+                                ],
                             ),
                             dl.Overlay(
                                 name="Satellite (LR)",
@@ -119,7 +122,7 @@ map_card = dbc.Card(
                                 children=dl.WMSTileLayer(
                                     id="wms-layer",
                                     url="https://maps.dwd.de/geoserver/ows?",
-                                    layers="dwd:RX-Produkt",
+                                    layers="dwd:Niederschlagsradar",
                                     format="image/png",
                                     transparent=True,
                                     opacity=0.7,
@@ -130,13 +133,15 @@ map_card = dbc.Card(
                             dl.Overlay(
                                 name="RainViewer (radar)",
                                 checked=True,
-                                children=dl.TileLayer(
-                                    id="rainradar-layer",
-                                    url=get_radar_latest_tile_url(),
-                                    opacity=0.7,
-                                    tileSize=256,
-                                    detectRetina=True,
-                                ),
+                                children=[  # Add list brackets here
+                                    dl.TileLayer(
+                                        id="rainradar-layer",
+                                        url=get_radar_latest_tile_url(),
+                                        opacity=0.7,
+                                        tileSize=256,
+                                        detectRetina=True,
+                                    )
+                                ],
                             ),
                             dl.Overlay(
                                 name="RainViewer (sat)",

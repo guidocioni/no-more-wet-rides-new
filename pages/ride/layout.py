@@ -118,26 +118,31 @@ map_card = dbc.Card(
                             dl.BaseLayer(
                                 name="Map",
                                 checked=True,
-                                children=dl.TileLayer(
-                                    url=mapURL,
-                                    attribution=attribution,
-                                    tileSize=512,
-                                    zoomOffset=-1,
-                                ),
+                                children=[
+                                    dl.TileLayer(
+                                        url=mapURL,
+                                        attribution=attribution,
+                                        tileSize=512,
+                                        zoomOffset=-1,
+                                        opacity=1.0,  # Add explicit opacity
+                                    )
+                                ],
                             ),
                             dl.Overlay(
                                 name="Satellite",
                                 checked=False,
-                                children=dl.WMSTileLayer(
-                                    id="wms-layer-sat",
-                                    url="https://maps.dwd.de/geoserver/ows?",
-                                    layers="dwd:Satellite_meteosat_1km_euat_rgb_day_hrv_and_night_ir108_3h",
-                                    format="image/png",
-                                    transparent=True,
-                                    opacity=0.7,
-                                    version="1.3.0",
-                                    detectRetina=True,
-                                ),
+                                children=[
+                                    dl.WMSTileLayer(
+                                        id="wms-layer-sat",
+                                        url="https://maps.dwd.de/geoserver/ows?",
+                                        layers="dwd:Satellite_meteosat_1km_euat_rgb_day_hrv_and_night_ir108_3h",
+                                        format="image/png",
+                                        transparent=True,
+                                        opacity=0.7,
+                                        version="1.3.0",
+                                        detectRetina=True,
+                                    )
+                                ],
                             ),
                             dl.Overlay(
                                 name="Radar",
@@ -145,7 +150,7 @@ map_card = dbc.Card(
                                 children=dl.WMSTileLayer(
                                     id="wms-layer",
                                     url="https://maps.dwd.de/geoserver/ows?",
-                                    layers="dwd:RX-Produkt",
+                                    layers="dwd:Niederschlagsradar",
                                     format="image/png",
                                     transparent=True,
                                     opacity=0.7,

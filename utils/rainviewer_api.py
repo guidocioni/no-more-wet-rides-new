@@ -184,13 +184,25 @@ def get_radar_tile_urls(type='radar', interval=3600, step=300, nowcast_interval=
         if data.get("code") != 0:
             print("Error:", data.get("message"))
             return None
-        data= data['data']
+        data = data['data']
         for category, timeframes in data.items():
-            for timeframe, items in timeframes.items():
-                for item in items:
-                    # Construct the URL and add it to the item
+            # Skip if timeframes is empty
+            if not timeframes:
+                continue
+            
+            # If timeframes is a dictionary with 'past'/'future' keys
+            if isinstance(timeframes, dict):
+                for status in ['past', 'future']:
+                    if status in timeframes:
+                        for item in timeframes[status]:
+                            item["url"] = f"https://tilecache.rainviewer.com/v2/{type}/{item['path']}/{tile_size}/{{z}}/{{x}}/{{y}}/{color}/{smooth}_{snow}_1_{minimum_dbz}.png"
+                            item["date"] = pd.to_datetime(item["time"], unit="s")
+            # If timeframes is a list
+            elif isinstance(timeframes, list):
+                for item in timeframes:
                     item["url"] = f"https://tilecache.rainviewer.com/v2/{type}/{item['path']}/{tile_size}/{{z}}/{{x}}/{{y}}/{color}/{smooth}_{snow}_1_{minimum_dbz}.png"
                     item["date"] = pd.to_datetime(item["time"], unit="s")
+        
         return data
 
     except requests.exceptions.RequestException as e:

@@ -15,6 +15,7 @@ import numpy as np
 import dash_leaflet as dl
 import plotly.graph_objects as go
 import pandas as pd
+import time
 
 
 @callback(
@@ -377,3 +378,15 @@ clientside_callback(
 #     Input("point_address", "value"),
 #     prevent_initial_call=True,
 # )
+
+@callback(
+    [Output("wms-layer-sat-hr", "params"),
+     Output("wms-layer-sat-lr", "params")],
+    Input("interval-wms-refresh", "n_intervals"),
+)
+def refresh_satellite_wms(n_intervals):
+    """
+    Refresh satellite WMS tiles with interval
+    """
+    timestamp = dict(cache=int(time.time()))
+    return timestamp, timestamp
