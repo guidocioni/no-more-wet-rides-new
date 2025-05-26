@@ -15,6 +15,7 @@ from dash import (
     Dash,
     page_registry,
 )
+from dash.exceptions import PreventUpdate
 from utils.settings import cache, URL_BASE_PATHNAME
 from utils.rainviewer_api import get_radar_latest_tile_url
 from components import navbar, footer
@@ -99,17 +100,23 @@ clientside_callback(
         "is_open",
     ),
     Input({"type": "generate-button", "index": MATCH}, "n_clicks"),
+    State({"type": "fade", "index": MATCH}, "is_open"),
     prevent_initial_call=True,
 )
-def toggle_fade(n):
+def toggle_fade(n, is_open):
     """
     Open the collapse element containing the plots once
-    the submit button has been pressed (on all pages)
+    the submit button has been pressed (on all pages), but do nothing
+    if the element is already open.
+    TODO: avoid running this if the plot is not correctly generated,
+    because if there's an error then an empty plot will be shown anyway.
     """
-    if not n:
-        # Button has never been clicked
-        return False
-    return True
+    if is_open:
+        # Do not update if already open.
+        raise PreventUpdate
+    if n:
+        return True
+    return False
 
 
 @callback(

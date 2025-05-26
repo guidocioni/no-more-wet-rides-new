@@ -149,7 +149,7 @@ def create_figure(data):
     except Exception as e:
         logging.error(f"RADOLAN trace error at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
 
-    # NWP trace
+    # NWP trace (hidden by default)
     try:
         # Retrieve time_radar independently for NWP forecast limits
         _, _, time_radar, _, _ = get_radar_data()
@@ -166,6 +166,7 @@ def create_figure(data):
             mode="markers+lines",
             fill="tozeroy",
             name="NWP",
+            visible="legendonly",  # Hide by default
         ))
     except Exception as e:
         logging.error(f"NWP trace error at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
