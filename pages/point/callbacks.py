@@ -7,8 +7,6 @@ from utils.utils import (
     to_rain_rate,
 )
 from utils.openmeteo_api import get_forecast_data
-from utils.rainviewer_api import get_forecast as get_forecast_rainviewer
-from utils.rainbow_weather_api import RainbowAI
 from utils.settings import logging
 from dash.exceptions import PreventUpdate
 import numpy as np
@@ -170,68 +168,6 @@ def create_figure(data):
         ))
     except Exception as e:
         logging.error(f"NWP trace error at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
-
-    # Rainviewer trace
-    try:
-        forecast_rainviewer = get_forecast_rainviewer(
-            latitude=data["lat"],
-            longitude=data["lon"],
-            days=1,
-            hours=1,
-            timezone=1,
-            nowcast=120,
-            nowcast_step=300,
-            radar_info=1,
-            probability=1,
-        )
-        forecast_rainviewer = forecast_rainviewer['nowcast']
-        tz = forecast_rainviewer['time'].dt.tz
-        forecast_rainviewer['time'] = forecast_rainviewer['time'].dt.tz_localize(None)
-        fig.add_trace(go.Scatter(
-            x=forecast_rainviewer["time"],
-            y=forecast_rainviewer["precipitation"],
-            mode="markers+lines",
-            fill="tozeroy",
-            name="Rainviewer",
-        ))
-    except Exception as e:
-        logging.error(f"Rainviewer trace error at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
-
-    # Rainbow trace
-    try:
-        # Retrieve a fresh tz reference by calling forecast_rainviewer within this block
-        forecast_rainviewer_tmp = get_forecast_rainviewer(
-            latitude=data["lat"],
-            longitude=data["lon"],
-            days=1,
-            hours=1,
-            timezone=1,
-            nowcast=120,
-            nowcast_step=300,
-            radar_info=1,
-            probability=1,
-        )['nowcast']
-        tz = forecast_rainviewer_tmp['time'].dt.tz
-
-        rainbow_api = RainbowAI()
-        weather_info = rainbow_api.get_weather_info()
-        snapshot_timestamp = weather_info['precipitation']['snapshot_timestamp']
-        forecast_rainbow = rainbow_api.get_forecast_by_location(snapshot_timestamp, 7200, data["lon"], data["lat"])
-        forecast_rainbow['timestampBegin'] = forecast_rainbow['timestampBegin'].dt.tz_convert(tz).dt.tz_localize(None)
-        forecast_rainbow = forecast_rainbow.resample('5min', on="timestampBegin").agg({
-            'precipRate':'sum',
-            'precipType':'first'
-        }).reset_index()
-        forecast_rainbow = forecast_rainbow[forecast_rainbow.timestampBegin >= forecast_rainviewer_tmp['time'].min()]
-        fig.add_trace(go.Scatter(
-            x=forecast_rainbow["timestampBegin"],
-            y=forecast_rainbow["precipRate"],
-            mode="markers+lines",
-            fill="tozeroy",
-            name="Rainbow",
-        ))
-    except Exception as e:
-        logging.error(f"Rainbow trace error at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
 
     # Figure layout settings (unchanged)
     fig.update_layout(

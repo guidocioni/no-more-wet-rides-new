@@ -17,7 +17,6 @@ from dash import (
 )
 from dash.exceptions import PreventUpdate
 from utils.settings import cache, URL_BASE_PATHNAME
-from utils.rainviewer_api import get_radar_latest_tile_url
 from components import navbar, footer
 
 app = Dash(
@@ -128,18 +127,6 @@ def refresh_wms(n_intervals):
     Refresh WMS tiles with interval
     """
     return dict(cache=int(time.time()))
-
-
-@callback(
-    [Output("rainradar-layer", "url"),Output("rainradar-layer-sat", "url")],
-    [Input("interval-wms-refresh", "n_intervals"),
-     Input("url", "pathname")],
-)
-def refresh_rainradar_tiles(n_intervals, path):
-    """
-    Refresh rainviewer tiles with interval
-    """
-    return get_radar_latest_tile_url(), get_radar_latest_tile_url(type='satprecip')
 
 
 @callback(
