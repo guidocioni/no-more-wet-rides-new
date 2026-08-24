@@ -178,12 +178,17 @@ def create_figure(data):
             )
         )
 
+    # Calculate appropriate y-axis range based on actual data
+    # Get max from all traces in the figure
+    max_rain = max([max(trace.y) if len(trace.y) > 0 else 0 for trace in fig.data])
+    y_range_max = min(max(max_rain * 1.2, 5), 30)  # Cap at 30 mm/h, min 5 mm/h
+
     # Figure layout settings
     fig.update_layout(
         shapes=shapes,
         legend_orientation="h",
         xaxis=dict(title="", rangemode="tozero"),
-        yaxis=dict(title="Precipitation [mm/h]", rangemode="tozero", fixedrange=True),
+        yaxis=dict(title="Precipitation [mm/h]", range=[0, y_range_max], fixedrange=True),
         margin={"r": 5, "t": 5, "l": 5, "b": 0},
         template="plotly_white",
         legend=dict(orientation="h", yanchor="top", y=0.99, xanchor="right", x=0.99),

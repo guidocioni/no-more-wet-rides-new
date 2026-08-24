@@ -518,6 +518,10 @@ def make_fig_time(df):
                 )
             )
 
+        # Calculate appropriate y-axis range based on actual data
+        max_rain = df.max().max()
+        y_range_max = min(max(max_rain * 1.2, 5), 30)  # Cap at 30 mm/h, min 5 mm/h
+
         fig.update_layout(
             shapes=shapes,
             legend_orientation="h",
@@ -525,7 +529,9 @@ def make_fig_time(df):
                 title="Time from departure [min]", rangemode="tozero", fixedrange=True
             ),
             yaxis=dict(
-                title="Precipitation [mm/h]", rangemode="tozero", fixedrange=True
+                title="Precipitation [mm/h]",
+                range=[0, y_range_max],
+                fixedrange=True
             ),
             legend=dict(title=dict(text="leave at "), font=dict(size=10)),
             height=390,
