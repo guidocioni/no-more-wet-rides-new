@@ -157,6 +157,8 @@ def create_figure(data):
             mode="markers+lines",
             fill="tozeroy",
             name="RADOLAN",
+            line=dict(width=3),
+            marker=dict(size=6),
         ))
     except Exception as e:
         logging.error(f"RADOLAN trace error at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
@@ -179,12 +181,41 @@ def create_figure(data):
             fill="tozeroy",
             name="NWP",
             visible="legendonly",  # Hide by default
+            line=dict(width=3),
+            marker=dict(size=6),
         ))
     except Exception as e:
         logging.error(f"NWP trace error at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
 
-    # Figure layout settings (unchanged)
+    # Add precipitation intensity bands in the background
+    # Standard precipitation classes (mm/h)
+    intensity_bands = [
+        {"y0": 0.1, "y1": 2.5, "color": "rgba(173, 216, 230, 0.2)"},
+        {"y0": 2.5, "y1": 10, "color": "rgba(255, 200, 124, 0.2)"},
+        {"y0": 10, "y1": 50, "color": "rgba(255, 127, 80, 0.25)"},
+        {"y0": 50, "y1": 100, "color": "rgba(220, 20, 60, 0.25)"},
+    ]
+
+    shapes = []
+    for band in intensity_bands:
+        shapes.append(
+            dict(
+                type="rect",
+                xref="paper",
+                yref="y",
+                x0=0,
+                x1=1,
+                y0=band["y0"],
+                y1=band["y1"],
+                fillcolor=band["color"],
+                line=dict(width=0),
+                layer="below",
+            )
+        )
+
+    # Figure layout settings
     fig.update_layout(
+        shapes=shapes,
         legend_orientation="h",
         xaxis=dict(title="", rangemode="tozero"),
         yaxis=dict(title="Precipitation [mm/h]", rangemode="tozero", fixedrange=True),

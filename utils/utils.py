@@ -494,7 +494,34 @@ def make_fig_time(df):
 
         fig = px.line(df, color_discrete_sequence=px.colors.qualitative.Pastel)
 
+        # Add precipitation intensity bands in the background
+        # Standard precipitation classes (mm/h)
+        intensity_bands = [
+            {"y0": 0.1, "y1": 2.5, "color": "rgba(173, 216, 230, 0.2)", "label": "Light"},
+            {"y0": 2.5, "y1": 10, "color": "rgba(255, 200, 124, 0.2)", "label": "Moderate"},
+            {"y0": 10, "y1": 50, "color": "rgba(255, 127, 80, 0.25)", "label": "Heavy"},
+            {"y0": 50, "y1": 100, "color": "rgba(220, 20, 60, 0.25)", "label": "Very Heavy"},
+        ]
+
+        shapes = []
+        for band in intensity_bands:
+            shapes.append(
+                dict(
+                    type="rect",
+                    xref="paper",
+                    yref="y",
+                    x0=0,
+                    x1=1,
+                    y0=band["y0"],
+                    y1=band["y1"],
+                    fillcolor=band["color"],
+                    line=dict(width=0),
+                    layer="below",
+                )
+            )
+
         fig.update_layout(
+            shapes=shapes,
             legend_orientation="h",
             xaxis=dict(
                 title="Time from departure [min]", rangemode="tozero", fixedrange=True
@@ -535,7 +562,34 @@ def make_fig_bars(df):
             ]
         )
 
+        # Add precipitation intensity bands in the background
+        # Standard precipitation classes (mm) - total accumulated
+        intensity_bands = [
+            {"y0": 0.1, "y1": 2.5, "color": "rgba(173, 216, 230, 0.15)"},
+            {"y0": 2.5, "y1": 10, "color": "rgba(255, 200, 124, 0.15)"},
+            {"y0": 10, "y1": 50, "color": "rgba(255, 127, 80, 0.2)"},
+            {"y0": 50, "y1": 100, "color": "rgba(220, 20, 60, 0.2)"},
+        ]
+
+        shapes = []
+        for band in intensity_bands:
+            shapes.append(
+                dict(
+                    type="rect",
+                    xref="paper",
+                    yref="y",
+                    x0=0,
+                    x1=1,
+                    y0=band["y0"],
+                    y1=band["y1"],
+                    fillcolor=band["color"],
+                    line=dict(width=0),
+                    layer="below",
+                )
+            )
+
         fig.update_layout(
+            shapes=shapes,
             legend_orientation="h",
             xaxis=dict(title="Leave at..", fixedrange=True),
             yaxis=dict(visible=False, fixedrange=True),
