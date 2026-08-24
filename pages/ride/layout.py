@@ -8,20 +8,26 @@ import dash_leaflet as dl
 
 register_page(__name__, path="/", title="Route")
 
-controls = dbc.Card(
-    [
+controls = dmc.Paper(
+    shadow="sm",
+    radius="md",
+    p="md",
+    withBorder=True,
+    className="mb-2",
+    children=[
         html.Div(id="geo"),
         dmc.Button(
             "Geolocate",
             id={"type": "geolocate", "index": "ride"},
             leftSection=DashIconify(icon="ion:location-outline", width=20),
-            className="col-12 mb-1",
-            size='xs',
+            className="col-12 mb-2",
+            size='sm',
+            variant='light',
             color='gray',
         ),
         dbc.InputGroup(
             [
-                DashIconify(icon="gis:route-start", width=30),
+                DashIconify(icon="gis:route-start", width=30, color="#40c057"),
                 dmc.Space(w=5),
                 dbc.Input(
                     placeholder="type address or geolocate",
@@ -43,19 +49,19 @@ controls = dbc.Card(
                     size="sm",
                 ),
             ],
-            # className="col-12",
         ),
         dmc.Button(
             "",
             id="exchange",
             leftSection=DashIconify(icon="ph:arrows-down-up-duotone", width=30),
-            className="col-12 mt-1 mb-1",
+            className="col-12 mt-2 mb-2",
             size='xs',
+            variant='light',
             color='gray',
         ),
         dbc.InputGroup(
             [
-                DashIconify(icon="gis:route-end", width=30),
+                DashIconify(icon="gis:route-end", width=30, color="#fa5252"),
                 dmc.Space(w=5),
                 dbc.Input(
                     placeholder="type address or click on map",
@@ -81,7 +87,7 @@ controls = dbc.Card(
         ),
         dbc.InputGroup(
             [
-                DashIconify(icon="material-symbols:transportation-sharp", width=30),
+                DashIconify(icon="material-symbols:transportation-sharp", width=30, color="#228be6"),
                 dmc.Space(w=5),
                 dbc.Select(
                     id="transport_mode",
@@ -94,18 +100,24 @@ controls = dbc.Card(
             ],
             className="mb-3 col-12",
         ),
-        dbc.Button(
+        dmc.Button(
             "Generate",
             id={"type": "generate-button", "index": "ride"},
-            className="mr-2 col-12",
+            className="col-12",
+            size="md",
+            leftSection=DashIconify(icon="mdi:lightning-bolt", width=20),
         ),
     ],
-    body=True,
-    className="mb-2",
 )
 
-map_card = dbc.Card(
-    [
+map_card = dmc.Paper(
+    shadow="sm",
+    radius="md",
+    p="xs",
+    withBorder=True,
+    className="mb-2",
+    style={"position": "relative"},
+    children=[
         html.Div(
             dl.Map(
                 children=[
@@ -195,20 +207,22 @@ map_card = dbc.Card(
             className="leaflet-control",
             title="Precipitation intensity (mm/h)",
         ),
-    ],
-    className="mb-2",
-    style={"position": "relative"},
+    ]
 )
 
-fig_card = html.Div(
-    [
-        dbc.Checklist(
-            options=[
-                {"label": "More details", "value": "time_series"},
-            ],
-            value=[],
+fig_card = dmc.Paper(
+    shadow="sm",
+    radius="md",
+    p="md",
+    withBorder=True,
+    className="mb-2",
+    children=[
+        dmc.Switch(
+            label="More details",
             id="switches-input",
-            switch=True,
+            size="sm",
+            color="blue",
+            className="mb-2",
         ),
         dcc.Graph(
             id="time-plot",
@@ -228,50 +242,77 @@ fig_card = html.Div(
             },
         ),
     ],
-    className="mb-2",
 )
 
 
-details_card = dbc.Card(
-    dbc.Row(
-        [
-            dbc.Col(
-                [
-                    dbc.Button(
-                        className="fa-solid fa-stopwatch",
-                        disabled=True,
-                        color="light",
-                        size="md",
-                    ),
-                    dbc.Spinner(html.Span(id='ride-duration'), type='grow'),
-                ]
-            ),
-            dbc.Col(
-                [
-                    dbc.Button(
-                        className="fa-solid fa-route",
-                        disabled=True,
-                        color="light",
-                        size="md",
-                    ),
-                    dbc.Spinner(html.Span(id='ride-distance'), type='grow'),
-                ]
-            ),
-            dbc.Col(
-                [
-                    dbc.Button(
-                        className="fa-solid fa-clock",
-                        disabled=True,
-                        color="light",
-                        size="md",
-                    ),
-                    dbc.Spinner(html.Span(id='best-time'), type='grow'),
-                ]
-            ),
-        ]
-    ),
-    body=True,
-    className='mb-3'
+details_card = dmc.SimpleGrid(
+    cols={"base": 1, "sm": 3},
+    spacing="md",
+    className="mb-3",
+    children=[
+        dmc.Paper(
+            shadow="sm",
+            radius="md",
+            p="md",
+            withBorder=True,
+            children=[
+                dmc.Group(
+                    gap="xs",
+                    children=[
+                        DashIconify(icon="mdi:clock-outline", width=24, color="#228be6"),
+                        dmc.Text("Duration", size="sm", c="dimmed", fw=500),
+                    ]
+                ),
+                dbc.Spinner(
+                    dmc.Text(id='ride-duration', size="xl", fw=700, mt="xs"),
+                    type='grow',
+                    size='sm'
+                ),
+            ]
+        ),
+        dmc.Paper(
+            shadow="sm",
+            radius="md",
+            p="md",
+            withBorder=True,
+            children=[
+                dmc.Group(
+                    gap="xs",
+                    children=[
+                        DashIconify(icon="mdi:map-marker-distance", width=24, color="#40c057"),
+                        dmc.Text("Distance", size="sm", c="dimmed", fw=500),
+                    ]
+                ),
+                dbc.Spinner(
+                    dmc.Text(id='ride-distance', size="xl", fw=700, mt="xs"),
+                    type='grow',
+                    size='sm'
+                ),
+            ]
+        ),
+        dmc.Paper(
+            shadow="sm",
+            radius="md",
+            p="md",
+            withBorder=True,
+            style={"background": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)"},
+            children=[
+                dmc.Group(
+                    gap="xs",
+                    children=[
+                        DashIconify(icon="mdi:weather-partly-rainy", width=24, color="white"),
+                        dmc.Text("Best time to leave", size="sm", c="white", fw=500),
+                    ]
+                ),
+                dbc.Spinner(
+                    dmc.Text(id='best-time', size="xl", fw=700, mt="xs", c="white"),
+                    type='grow',
+                    size='sm',
+                    color='light'
+                ),
+            ]
+        ),
+    ]
 )
 
 

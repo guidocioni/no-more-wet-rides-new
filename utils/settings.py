@@ -11,7 +11,7 @@ logging.basicConfig(
 )
 
 URL_BASE_PATHNAME = "/nmwr/"
-CACHE_DIR = '/var/cache/nmwr/'
+CACHE_DIR_PREFERRED = '/var/cache/nmwr/'
 DISABLE_CACHE = os.getenv("DISABLE_CACHE", "false").lower() == "true"
 RADAR_URL = 'https://opendata.dwd.de/weather/radar/composite/wn'
 APIURL_PLACES = 'https://api.mapbox.com/geocoding/v5/mapbox.places'
@@ -32,10 +32,10 @@ def get_cache_directory():
     candidates = []
 
     if platform.system() in ("Linux", "Darwin"):  # Darwin is MacOS
-        candidates.append(CACHE_DIR)
-        candidates.append(os.path.join(tempfile.gettempdir(), "pointwx"))
+        candidates.append(CACHE_DIR_PREFERRED)
+        candidates.append(os.path.join(tempfile.gettempdir(), "nmwr"))
     else:
-        candidates.append(os.path.join(tempfile.gettempdir(), "pointwx"))
+        candidates.append(os.path.join(tempfile.gettempdir(), "nmwr"))
 
     for cache_dir in candidates:
         try:
@@ -50,6 +50,7 @@ def get_cache_directory():
 
 if DISABLE_CACHE:
     cache = Cache(config={"CACHE_TYPE": "null"})
+    CACHE_DIR = tempfile.gettempdir()  # Fallback for data files
 else:
     cache_dir = get_cache_directory()
     if cache_dir:
@@ -58,6 +59,8 @@ else:
             "CACHE_TYPE": "filesystem",
             "CACHE_DIR": cache_dir,
         })
+        CACHE_DIR = cache_dir  # Expose the actual writable cache directory
     else:
         logging.warning("No writable cache directory found, disabling cache")
         cache = Cache(config={"CACHE_TYPE": "null"})
+        CACHE_DIR = tempfile.gettempdir()  # Fallback for data files

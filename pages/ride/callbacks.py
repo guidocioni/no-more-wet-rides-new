@@ -235,7 +235,7 @@ def create_coords_and_map(n_clicks, from_address, to_address, mode):
         Output("error-message", "children", allow_duplicate=True),
         Output("error-modal", "is_open", allow_duplicate=True),
     ],
-    [Input("intermediate-value", "data"), Input("switches-input", "value")],
+    [Input("intermediate-value", "data"), Input("switches-input", "checked")],
     prevent_initial_call=True,
 )
 def create_figure(data, switch):
@@ -261,7 +261,7 @@ def create_figure(data, switch):
                     )
                 else:
                     min_time = out.sum().idxmin().strftime("%H:%M:%S")
-                    if switch == ["time_series"]:
+                    if switch:
                         return make_fig_time(out), min_time, None, False
                     else:
                         return make_fig_bars(out), min_time, None, False

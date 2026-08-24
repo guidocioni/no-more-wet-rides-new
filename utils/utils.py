@@ -266,7 +266,7 @@ def get_radar_data(
     for f in glob.glob(f"{data_path}/WN??????????_???"):
         os.remove(f)
     # Download and extract bz2
-    filename = data_path + "WN_LATEST.tar"
+    filename = os.path.join(data_path, "WN_LATEST.tar")
     r = requests.get(f"{base_radar_url}/WN_LATEST.tar.bz2", stream=True)
     if r.status_code == requests.codes.ok:
         with r.raw as source, open(filename, "wb") as dest:
@@ -277,7 +277,7 @@ def get_radar_data(
     tar_file = tarfile.open(filename)
     extracted_files = tar_file.getnames()
     tar_file.extractall(data_path)
-    extracted_files = [f"{data_path}{s}" for s in extracted_files]
+    extracted_files = [os.path.join(data_path, s) for s in extracted_files]
     # Remove tar file
     os.remove(filename)
 

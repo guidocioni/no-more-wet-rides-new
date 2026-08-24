@@ -8,15 +8,21 @@ import dash_leaflet as dl
 
 register_page(__name__, path="/point", title="Point")
 
-controls = dbc.Card(
-    [
+controls = dmc.Paper(
+    shadow="sm",
+    radius="md",
+    p="md",
+    withBorder=True,
+    className="mb-2",
+    children=[
         html.Div(id="geo"),
         dmc.Button(
             "Geolocate",
             id={"type": "geolocate", "index": "point"},
             leftSection=DashIconify(icon="ion:location-outline", width=20),
-            className="col-12 mb-1",
-            size="xs",
+            className="col-12 mb-2",
+            size="sm",
+            variant="light",
             color="gray",
         ),
         html.Datalist(
@@ -42,18 +48,24 @@ controls = dbc.Card(
                 ),
             ]
         ),
-        dbc.Button(
+        dmc.Button(
             "Generate",
             id={"type": "generate-button", "index": "point"},
-            className="mt-2 mr-2 col-12",
+            className="mt-2 col-12",
+            size="md",
+            leftSection=DashIconify(icon="mdi:lightning-bolt", width=20),
         ),
     ],
-    body=True,
-    className="mb-2",
 )
 
-map_card = dbc.Card(
-    [
+map_card = dmc.Paper(
+    shadow="sm",
+    radius="md",
+    p="xs",
+    withBorder=True,
+    className="mb-2",
+    style={"position": "relative"},
+    children=[
         html.Div(
             dl.Map(
                 children=[
@@ -166,29 +178,34 @@ map_card = dbc.Card(
             className="leaflet-control",
             title="Precipitation intensity (mm/h)",
         ),
-    ],
-    className="mb-2",
-    style={"position": "relative"},
+    ]
 )
 
-fig_card = (
-    dcc.Graph(
-        id="time-plot-point",
-        config={
-            "modeBarButtonsToRemove": [
-                "select",
-                "lasso2d",
-                "zoomIn",
-                "zoomOut",
-                "resetScale",
-                "autoScale",
-                "pan2d",
-                "toImage",
-                "zoom2d",
-            ],
-            "displaylogo": False,
-        },
-    ),
+fig_card = dmc.Paper(
+    shadow="sm",
+    radius="md",
+    p="md",
+    withBorder=True,
+    className="mb-2",
+    children=[
+        dcc.Graph(
+            id="time-plot-point",
+            config={
+                "modeBarButtonsToRemove": [
+                    "select",
+                    "lasso2d",
+                    "zoomIn",
+                    "zoomOut",
+                    "resetScale",
+                    "autoScale",
+                    "pan2d",
+                    "toImage",
+                    "zoom2d",
+                ],
+                "displaylogo": False,
+            },
+        ),
+    ]
 )
 
 help_card = dbc.Accordion(
