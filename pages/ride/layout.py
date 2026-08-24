@@ -105,9 +105,8 @@ controls = dbc.Card(
 )
 
 map_card = dbc.Card(
-    html.Div(
-        id="map-div",
-        children=[
+    [
+        html.Div(
             dl.Map(
                 children=[
                     dl.FullScreenControl(),
@@ -124,7 +123,7 @@ map_card = dbc.Card(
                                         attribution=attribution,
                                         tileSize=512,
                                         zoomOffset=-1,
-                                        opacity=1.0,  # Add explicit opacity
+                                        opacity=1.0,
                                     )
                                 ],
                             ),
@@ -173,10 +172,32 @@ map_card = dbc.Card(
                 dragging=True,
                 scrollWheelZoom=True,
                 id="map",
-            )
-        ],
-    ),
+            ),
+            id="map-div",
+            style={"position": "relative"},
+        ),
+        html.Img(
+            id="radar-legend",
+            src="https://maps.dwd.de/geoserver/ows?service=WMS&version=1.3.0&request=GetLegendGraphic&format=image/png&layer=dwd:Niederschlagsradar",
+            style={
+                "position": "absolute",
+                "bottom": "30px",
+                "right": "10px",
+                "background": "rgba(255, 255, 255, 0.9)",
+                "padding": "3px 2px 3px 3px",
+                "border-radius": "3px",
+                "box-shadow": "0 1px 3px rgba(0,0,0,0.4)",
+                "z-index": "1000",
+                "height": "120px",
+                "width": "auto",
+                "pointer-events": "none",
+            },
+            className="leaflet-control",
+            title="Precipitation intensity (mm/h)",
+        ),
+    ],
     className="mb-2",
+    style={"position": "relative"},
 )
 
 fig_card = html.Div(

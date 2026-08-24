@@ -120,6 +120,15 @@ RADOLAN processing happens in `utils/radolan.py` and `utils/utils.py`:
 - **Directions**: `APIURL_DIRECTIONS` - calculates routes with timing
 - Modes: cycling (default), walking, driving
 
+#### Geocoding Configuration
+- **Search Quality**: Uses `autocomplete=True` for fuzzy matching
+- **Input Sanitization**: Normalizes whitespace only - preserves postal codes for better matching
+- **Type Filtering**: Allows places, localities, neighborhoods, districts, postcodes, and addresses
+- **Coverage**: Defaults to RADOLAN coverage area (Germany + neighbors: de,at,ch,fr,nl,be,pl,cz,dk)
+- **Language Handling**: No language parameter by default - preserves native names for better fuzzy matching
+- **Autocomplete UI**: Datalist options include both native names and accent-stripped variants (via `unidecode`) so typing "Munchen" matches "München, Bavaria, Germany"
+- **Known Limitation**: Very small neighborhoods not in Mapbox's database (e.g., "Teufelsbrück") may not be found - use nearby major streets or postal codes instead
+
 ### DWD RADOLAN
 - **Source**: `https://opendata.dwd.de/weather/radar/composite/wn`
 - **Format**: `.tar.bz2` archives containing binary RADOLAN files

@@ -25,6 +25,7 @@ import pandas as pd
 import numpy as np
 import dash_leaflet as dl
 import io
+from unidecode import unidecode
 
 
 @callback(
@@ -45,7 +46,20 @@ def suggest_locs(value, options):
     if locations_names is None or len(locations_names) == 0:
         raise PreventUpdate
 
-    options = [html.Option(value=name) for name in locations_names]
+    # Create options with both native and accent-stripped names
+    # This allows "Munchen" to match "München" in the datalist
+    options = []
+    seen = set()
+    for name in locations_names:
+        # Add native name
+        if name not in seen:
+            options.append(html.Option(value=name))
+            seen.add(name)
+        # Add accent-stripped version if different
+        stripped = unidecode(name)
+        if stripped != name and stripped not in seen:
+            options.append(html.Option(value=stripped))
+            seen.add(stripped)
 
     return options
 
@@ -68,7 +82,20 @@ def suggest_locs2(value, options):
     if locations_names is None or len(locations_names) == 0:
         raise PreventUpdate
 
-    options = [html.Option(value=name) for name in locations_names]
+    # Create options with both native and accent-stripped names
+    # This allows "Munchen" to match "München" in the datalist
+    options = []
+    seen = set()
+    for name in locations_names:
+        # Add native name
+        if name not in seen:
+            options.append(html.Option(value=name))
+            seen.add(name)
+        # Add accent-stripped version if different
+        stripped = unidecode(name)
+        if stripped != name and stripped not in seen:
+            options.append(html.Option(value=stripped))
+            seen.add(stripped)
 
     return options
 

@@ -91,23 +91,88 @@ def get_directions(
     return sourcePlace, destPlace, lons, lats, dtime, meta
 
 
+def _sanitize_place_input(place):
+    """
+    Sanitize user input for better Mapbox geocoding results.
+    Normalizes whitespace only - keeps postal codes for better matching.
+    """
+    if not place:
+        return place
+
+    # Collapse multiple spaces into one
+    place = re.sub(r'\s{2,}', ' ', place)
+
+    # Trim leading/trailing whitespace
+    place = place.strip()
+
+    return place
+
+
 @cache.memoize(900)
-def get_place_address(place, 
-                      country=None, # 'de,fr,ch,at'
+def get_place_address(place,
+                      country='de,at,ch,fr,nl,be,pl,cz,dk',  # RADOLAN coverage
                       limit=5,
-                      language=None):
+                      language=None,
+                      autocomplete=True,  # Enable fuzzy matching
+                      types='place,locality,neighborhood,district,postcode,address'):
+    """
+    Forward geocode an address using Mapbox Geocoding API.
+
+    Sanitizes input and uses autocomplete mode for fuzzy matching,
+    which improves search quality for:
+    - Umlaut variations (Teufelsbrueck → Teufelsbrück)
+    - Partial queries (Hamb → Hamburg)
+    - Minor typos and spelling variations
+
+    Parameters:
+    -----------
+    place : str
+        Search query (address or place name)
+    country : str, optional
+        Comma-separated ISO 3166-1 alpha-2 country codes to limit results.
+        Defaults to RADOLAN coverage area (Germany + neighbors).
+    limit : int, optional
+        Maximum number of results to return (default 5, Mapbox max is 10)
+    language : str, optional
+        ISO 639-1 language code. Default None preserves native names
+        for better fuzzy matching.
+    autocomplete : bool, optional
+        Enable autocomplete mode for partial queries (default True)
+    types : str, optional
+        Comma-separated list of feature types to filter results
+        (default: geographic locations only)
+
+    Returns:
+    --------
+    tuple of (place_name, place_center)
+        place_name : str or list of str
+            Single result (limit=1) or list of results (limit>1)
+        place_center : [lon, lat] or list of [lon, lat]
+            Coordinates matching the place_name(s)
+        Returns (None, None) if no results found
+    """
+    # Sanitize input for better matching (especially umlauts)
+    place = _sanitize_place_input(place)
+
+    if not place:
+        return None, None
+
     url = f"{APIURL_PLACES}/{place}.json"
 
     payload = {
         'access_token': apiKey,
         'limit': limit,
-        'proximity': 'ip'
+        'autocomplete': autocomplete,
+        'types': types
     }
 
-    if language:
-        payload['language'] = language
     if country:
         payload['country'] = country
+
+    # Note: language parameter intentionally omitted by default
+    # Mapbox's native name matching provides better fuzzy search
+    if language:
+        payload['language'] = language
 
     response = requests.get(url, params=payload)
     json_data = json.loads(response.text)
