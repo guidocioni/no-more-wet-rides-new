@@ -12,6 +12,7 @@ logging.basicConfig(
 
 URL_BASE_PATHNAME = "/nmwr/"
 CACHE_DIR = '/var/cache/nmwr/'
+DISABLE_CACHE = os.getenv("DISABLE_CACHE", "false").lower() == "true"
 RADAR_URL = 'https://opendata.dwd.de/weather/radar/composite/wn'
 APIURL_PLACES = 'https://api.mapbox.com/geocoding/v5/mapbox.places'
 APIURL_DIRECTIONS = 'https://api.mapbox.com/directions/v5/mapbox'
@@ -26,55 +27,37 @@ mapURL = (
 )
 attribution = '© <a href="https://www.mapbox.com/feedback/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 
-# Set cache directory for flask_caching.
-# Handle different systems
 def get_cache_directory():
-    system = platform.system()
-    if system == 'Linux' or system == 'Darwin':  # Darwin is MacOS
-        primary_cache_dir = CACHE_DIR
-        fallback_cache_dir = os.path.join(tempfile.gettempdir(), 'nmwr')
-    else:
-        # Default case for unknown systems
-        primary_cache_dir = os.path.join(tempfile.gettempdir(), 'nmwr')
+    """Get a writable cache directory, trying primary location first, then fallback."""
+    candidates = []
 
-    if os.path.exists(primary_cache_dir):
-        if os.access(primary_cache_dir, os.W_OK):
-            logging.info(f"Using {primary_cache_dir} as cache directory")
-            return primary_cache_dir
-        else:
-            logging.warning(f"Primary cache directory {primary_cache_dir} is not writable.")
+    if platform.system() in ("Linux", "Darwin"):  # Darwin is MacOS
+        candidates.append(CACHE_DIR)
+        candidates.append(os.path.join(tempfile.gettempdir(), "pointwx"))
     else:
-        try:
-            os.makedirs(primary_cache_dir, exist_ok=True)
-            if os.access(primary_cache_dir, os.W_OK):
-                logging.info(f"Using {primary_cache_dir} as cache directory")
-                return primary_cache_dir
-        except Exception as e:
-            logging.warning(f"Could not create primary cache directory {primary_cache_dir}: {e}. Falling back.")
+        candidates.append(os.path.join(tempfile.gettempdir(), "pointwx"))
 
-    if os.path.exists(fallback_cache_dir):
-        if os.access(fallback_cache_dir, os.W_OK):
-            logging.info(f"Using {fallback_cache_dir} as cache directory")
-            return fallback_cache_dir
-        else:
-            logging.warning(f"Fallback cache directory {fallback_cache_dir} is not writable.")
-    else:
+    for cache_dir in candidates:
         try:
-            os.makedirs(fallback_cache_dir, exist_ok=True)
-            if os.access(fallback_cache_dir, os.W_OK):
-                logging.info(f"Using {fallback_cache_dir} as cache directory")
-                return fallback_cache_dir
-        except Exception as e:
-            logging.warning(f"Could not create fallback cache directory {fallback_cache_dir}: {e}")
-    logging.warning("No suitable cache directory found. Disabling cache!")
+            os.makedirs(cache_dir, exist_ok=True)
+            if os.access(cache_dir, os.W_OK):
+                return cache_dir
+        except OSError:
+            continue
 
     return None
 
-cache_dir = get_cache_directory()
 
-if cache_dir:
-    cache = Cache(config={"CACHE_TYPE": "filesystem",
-                          "CACHE_DIR": cache_dir,
-                          "CACHE_THRESHOLD": 20})
-else:
+if DISABLE_CACHE:
     cache = Cache(config={"CACHE_TYPE": "null"})
+else:
+    cache_dir = get_cache_directory()
+    if cache_dir:
+        logging.info(f"Using {cache_dir} as cache directory")
+        cache = Cache(config={
+            "CACHE_TYPE": "filesystem",
+            "CACHE_DIR": cache_dir,
+        })
+    else:
+        logging.warning("No writable cache directory found, disabling cache")
+        cache = Cache(config={"CACHE_TYPE": "null"})

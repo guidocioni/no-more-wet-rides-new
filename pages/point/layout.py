@@ -117,7 +117,7 @@ map_card = dbc.Card(
                             ),
                             dl.Overlay(
                                 name="RADOLAN",
-                                checked=False,
+                                checked=True,
                                 children=dl.WMSTileLayer(
                                     id="wms-layer",
                                     url="https://maps.dwd.de/geoserver/ows?",
