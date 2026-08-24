@@ -19,7 +19,7 @@ from utils.utils import (
     get_directions,
     get_place_address,
 )
-from utils.constants import SCROLL_TIMEOUT_MS, AUTOCOMPLETE_MIN_LENGTH
+from utils.constants import SCROLL_TO_ELEMENT_JS, AUTOCOMPLETE_MIN_LENGTH
 from dash.exceptions import PreventUpdate
 from utils.settings import shifts, logging
 import pandas as pd
@@ -380,28 +380,10 @@ def map_click(clickData):
 
 # Scroll to the plot when it is ready
 clientside_callback(
-    """
-    function(n_clicks, element_id) {
-            var targetElement = document.getElementById(element_id);
-            if (targetElement) {
-                setTimeout(function() {
-                    targetElement.scrollIntoView({ behavior: 'smooth' });
-                }, """ + str(SCROLL_TIMEOUT_MS) + """); // in milliseconds
-            }
-    }
-    """,
+    SCROLL_TO_ELEMENT_JS,
     Input("intermediate-value", "data"),
     [State("time-plot", "id")],
     prevent_initial_call=True,
 )
 
-
-@callback(
-    Output({"id": MATCH, "type": "searchData"}, "value", allow_duplicate=True),
-    Input(dict(type="clearButton", id=MATCH), "n_clicks"),
-    prevent_initial_call=True,
-)
-def clear_input(n_clicks):
-    if n_clicks:
-        return ""
-    return PreventUpdate
+# Note: clear_input callback moved to main.py as pattern-matching callback

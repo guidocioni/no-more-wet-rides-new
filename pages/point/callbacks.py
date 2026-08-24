@@ -7,7 +7,7 @@ from utils.utils import (
 from utils.callback_helpers import get_rain_at_point
 from utils.openmeteo_api import get_forecast_data
 from utils.settings import logging
-from utils.constants import PRECIPITATION_INTENSITY_BANDS, SCROLL_TIMEOUT_MS, AUTOCOMPLETE_MIN_LENGTH
+from utils.constants import PRECIPITATION_INTENSITY_BANDS, SCROLL_TO_ELEMENT_JS, AUTOCOMPLETE_MIN_LENGTH
 from dash.exceptions import PreventUpdate
 import numpy as np
 import dash_leaflet as dl
@@ -290,15 +290,7 @@ def map_click(clickData):
     raise PreventUpdate
 
 
-@callback(
-    Output({"id": "point-loc", "type": "searchData"}, "value", allow_duplicate=True),
-    Input("clear-button", "n_clicks"),
-    prevent_initial_call=True,
-)
-def clear_input(n_clicks):
-    if n_clicks:
-        return ""
-    return PreventUpdate
+# Note: clear_input callback moved to main.py as pattern-matching callback
 
 
 # @callback(
@@ -322,16 +314,7 @@ def clear_input(n_clicks):
 
 # Scroll to the plot after the generate button has been pressed
 clientside_callback(
-    """
-    function(n_clicks, element_id) {
-            var targetElement = document.getElementById(element_id);
-            if (targetElement) {
-                setTimeout(function() {
-                    targetElement.scrollIntoView({ behavior: 'smooth' });
-                }, """ + str(SCROLL_TIMEOUT_MS) + """); // in milliseconds
-            }
-    }
-    """,
+    SCROLL_TO_ELEMENT_JS,
     Input("intermediate-value-point", "data"),
     [State("time-plot-point", "id")],
     prevent_initial_call=True,

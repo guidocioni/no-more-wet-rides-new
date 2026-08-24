@@ -43,7 +43,7 @@ controls = dmc.Paper(
                 dbc.Button(
                     className="fa-solid fa-xmark",
                     n_clicks=0,
-                    id="clear-button",
+                    id=dict(type="clearButton", id="point-loc"),
                     color="light",
                     size="sm",
                 ),

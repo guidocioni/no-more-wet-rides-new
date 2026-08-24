@@ -58,3 +58,16 @@ SIMPLIFICATION_TOLERANCE = 0.0001  # Tolerance for route geometry simplification
 
 # Data sentinel values
 MISSING_DATA_VALUE = -9999  # Sentinel value for missing/invalid data
+
+# Clientside callback JavaScript code
+# Scroll to element smoothly after a delay
+SCROLL_TO_ELEMENT_JS = f"""
+    function(n_clicks, element_id) {{
+            var targetElement = document.getElementById(element_id);
+            if (targetElement) {{
+                setTimeout(function() {{
+                    targetElement.scrollIntoView({{ behavior: 'smooth' }});
+                }}, {SCROLL_TIMEOUT_MS}); // in milliseconds
+            }}
+    }}
+    """

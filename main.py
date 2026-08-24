@@ -17,6 +17,7 @@ from dash import (
 )
 from dash.exceptions import PreventUpdate
 from utils.settings import cache, URL_BASE_PATHNAME
+from utils.constants import SCROLL_TIMEOUT_MS
 from components import navbar, footer
 
 app = Dash(
@@ -193,3 +194,23 @@ def update_navbar_title(pathname, is_open):
     else:
         return ""
 
+
+# Consolidated clientside callbacks (shared across pages)
+
+@callback(
+    Output({"id": MATCH, "type": "searchData"}, "value", allow_duplicate=True),
+    Input(dict(type="clearButton", id=MATCH), "n_clicks"),
+    prevent_initial_call=True,
+)
+def clear_input(n_clicks):
+    """
+    Clear input field when clear button is clicked.
+    Pattern-matching callback that works for all pages.
+
+    Previously duplicated in:
+    - pages/ride/callbacks.py (lines 398-406)
+    - pages/point/callbacks.py (lines 304-312)
+    """
+    if n_clicks:
+        return ""
+    return PreventUpdate
