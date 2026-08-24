@@ -20,6 +20,12 @@ from .settings import (
     APIURL_DIRECTIONS,
     logging,
 )
+from .constants import (
+    PRECIPITATION_INTENSITY_BANDS,
+    PRECIPITATION_INTENSITY_BANDS_BARS,
+    SIMPLIFICATION_TOLERANCE,
+    CACHE_DURATION_GEOCODING,
+)
 from .radolan import read_radolan_composite, get_latlon_radar, to_rain_rate
 import tarfile
 
@@ -30,9 +36,9 @@ except ImportError:
     SIMPLIFICATION_AVAILABLE = False
 
 
-@cache.memoize(900)
+@cache.memoize(CACHE_DURATION_GEOCODING)
 def get_directions(
-    start_point, end_point, mode="cycling", simplify=True, simplify_tolerance=0.0001
+    start_point, end_point, mode="cycling", simplify=True, simplify_tolerance=SIMPLIFICATION_TOLERANCE
 ):
     """
     Get directions using mapbox API. Note that this is cached
@@ -495,16 +501,8 @@ def make_fig_time(df):
         fig = px.line(df, color_discrete_sequence=px.colors.qualitative.Pastel)
 
         # Add precipitation intensity bands in the background
-        # Standard precipitation classes (mm/h)
-        intensity_bands = [
-            {"y0": 0.1, "y1": 2.5, "color": "rgba(173, 216, 230, 0.2)", "label": "Light"},
-            {"y0": 2.5, "y1": 10, "color": "rgba(255, 200, 124, 0.2)", "label": "Moderate"},
-            {"y0": 10, "y1": 50, "color": "rgba(255, 127, 80, 0.25)", "label": "Heavy"},
-            {"y0": 50, "y1": 100, "color": "rgba(220, 20, 60, 0.25)", "label": "Very Heavy"},
-        ]
-
         shapes = []
-        for band in intensity_bands:
+        for band in PRECIPITATION_INTENSITY_BANDS:
             shapes.append(
                 dict(
                     type="rect",
@@ -563,16 +561,8 @@ def make_fig_bars(df):
         )
 
         # Add precipitation intensity bands in the background
-        # Standard precipitation classes (mm) - total accumulated
-        intensity_bands = [
-            {"y0": 0.1, "y1": 2.5, "color": "rgba(173, 216, 230, 0.15)"},
-            {"y0": 2.5, "y1": 10, "color": "rgba(255, 200, 124, 0.15)"},
-            {"y0": 10, "y1": 50, "color": "rgba(255, 127, 80, 0.2)"},
-            {"y0": 50, "y1": 100, "color": "rgba(220, 20, 60, 0.2)"},
-        ]
-
         shapes = []
-        for band in intensity_bands:
+        for band in PRECIPITATION_INTENSITY_BANDS_BARS:
             shapes.append(
                 dict(
                     type="rect",

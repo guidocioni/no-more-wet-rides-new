@@ -19,6 +19,7 @@ from utils.utils import (
     get_directions,
     get_place_address,
 )
+from utils.constants import SCROLL_TIMEOUT_MS, AUTOCOMPLETE_MIN_LENGTH
 from dash.exceptions import PreventUpdate
 from utils.settings import shifts, logging
 import pandas as pd
@@ -38,7 +39,7 @@ def suggest_locs(value, options):
     # Check if the value is already present in the options
     if any(item["props"]["value"] == value for item in options):
         raise PreventUpdate
-    if value is None or len(value) < 4:
+    if value is None or len(value) < AUTOCOMPLETE_MIN_LENGTH:
         raise PreventUpdate
     locations_names, _ = get_place_address(
         value, limit=5
@@ -385,7 +386,7 @@ clientside_callback(
             if (targetElement) {
                 setTimeout(function() {
                     targetElement.scrollIntoView({ behavior: 'smooth' });
-                }, 500); // in milliseconds
+                }, """ + str(SCROLL_TIMEOUT_MS) + """); // in milliseconds
             }
     }
     """,

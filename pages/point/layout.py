@@ -3,6 +3,7 @@ import dash_mantine_components as dmc
 from dash_iconify import DashIconify
 from dash import dcc, html, register_page
 from utils.settings import mapURL, attribution
+from utils.constants import GRAPH_CONFIG, DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM
 from .callbacks import *
 import dash_leaflet as dl
 
@@ -143,8 +144,8 @@ map_card = dmc.Paper(
                         ]
                     ),
                 ],
-                center=[51.326863, 10.354922],
-                zoom=5,
+                center=DEFAULT_MAP_CENTER,
+                zoom=DEFAULT_MAP_ZOOM,
                 style={
                     "width": "100%",
                     "height": "40vh",
@@ -190,20 +191,7 @@ fig_card = dmc.Paper(
     children=[
         dcc.Graph(
             id="time-plot-point",
-            config={
-                "modeBarButtonsToRemove": [
-                    "select",
-                    "lasso2d",
-                    "zoomIn",
-                    "zoomOut",
-                    "resetScale",
-                    "autoScale",
-                    "pan2d",
-                    "toImage",
-                    "zoom2d",
-                ],
-                "displaylogo": False,
-            },
+            config=GRAPH_CONFIG,
         ),
     ]
 )

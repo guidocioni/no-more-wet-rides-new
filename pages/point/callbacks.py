@@ -8,6 +8,7 @@ from utils.utils import (
 )
 from utils.openmeteo_api import get_forecast_data
 from utils.settings import logging
+from utils.constants import PRECIPITATION_INTENSITY_BANDS, SCROLL_TIMEOUT_MS, AUTOCOMPLETE_MIN_LENGTH
 from dash.exceptions import PreventUpdate
 import numpy as np
 import dash_leaflet as dl
@@ -27,7 +28,7 @@ def suggest_locs(value, options):
     # Check if the value is already present in the options
     if any(item["props"]["value"] == value for item in options):
         raise PreventUpdate
-    if value is None or len(value) < 4:
+    if value is None or len(value) < AUTOCOMPLETE_MIN_LENGTH:
         raise PreventUpdate
     locations_names, _ = get_place_address(
         value, limit=5
@@ -188,16 +189,8 @@ def create_figure(data):
         logging.error(f"NWP trace error at line {e.__traceback__.tb_lineno} of {__file__}: {e}")
 
     # Add precipitation intensity bands in the background
-    # Standard precipitation classes (mm/h)
-    intensity_bands = [
-        {"y0": 0.1, "y1": 2.5, "color": "rgba(173, 216, 230, 0.2)"},
-        {"y0": 2.5, "y1": 10, "color": "rgba(255, 200, 124, 0.2)"},
-        {"y0": 10, "y1": 50, "color": "rgba(255, 127, 80, 0.25)"},
-        {"y0": 50, "y1": 100, "color": "rgba(220, 20, 60, 0.25)"},
-    ]
-
     shapes = []
-    for band in intensity_bands:
+    for band in PRECIPITATION_INTENSITY_BANDS:
         shapes.append(
             dict(
                 type="rect",
@@ -331,7 +324,7 @@ def clear_input(n_clicks):
 #     raise PreventUpdate
 
 
-# Scroll to the plot 500 ms after the generate button has been pressed
+# Scroll to the plot after the generate button has been pressed
 clientside_callback(
     """
     function(n_clicks, element_id) {
@@ -339,7 +332,7 @@ clientside_callback(
             if (targetElement) {
                 setTimeout(function() {
                     targetElement.scrollIntoView({ behavior: 'smooth' });
-                }, 500); // in milliseconds
+                }, """ + str(SCROLL_TIMEOUT_MS) + """); // in milliseconds
             }
     }
     """,
