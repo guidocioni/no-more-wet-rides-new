@@ -3,9 +3,8 @@ from utils.utils import (
     get_place_address_reverse,
     get_place_address,
     get_radar_data,
-    distance_km,
-    to_rain_rate,
 )
+from utils.callback_helpers import get_rain_at_point
 from utils.openmeteo_api import get_forecast_data
 from utils.settings import logging
 from utils.constants import PRECIPITATION_INTENSITY_BANDS, SCROLL_TIMEOUT_MS, AUTOCOMPLETE_MIN_LENGTH
@@ -148,10 +147,7 @@ def create_figure(data):
 
     # RADOLAN trace
     try:
-        lon_radar, lat_radar, time_radar, _, rr = get_radar_data()
-        dist = distance_km(lon_radar, data["lon"], lat_radar, data["lat"])
-        min_indices = np.unravel_index(dist.argmin(), dist.shape)
-        rain_time = to_rain_rate(rr[:, min_indices[0], min_indices[1]])
+        time_radar, rain_time = get_rain_at_point(data["lon"], data["lat"])
         fig.add_trace(go.Scatter(
             x=time_radar,
             y=rain_time,
