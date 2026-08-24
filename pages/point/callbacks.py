@@ -1,20 +1,22 @@
 from dash import Input, Output, callback, State, clientside_callback, html, no_update
 from utils.utils import (
-    get_place_address_reverse,
     get_place_address,
     get_radar_data,
 )
-from utils.callback_helpers import get_rain_at_point
+from utils.callback_helpers import (
+    get_rain_at_point,
+    create_location_suggestions,
+    handle_map_click,
+)
 from utils.openmeteo_api import get_forecast_data
 from utils.settings import logging
-from utils.constants import PRECIPITATION_INTENSITY_BANDS, SCROLL_TO_ELEMENT_JS, AUTOCOMPLETE_MIN_LENGTH
+from utils.constants import PRECIPITATION_INTENSITY_BANDS, SCROLL_TO_ELEMENT_JS
 from dash.exceptions import PreventUpdate
 import numpy as np
 import dash_leaflet as dl
 import plotly.graph_objects as go
 import pandas as pd
 import time
-from unidecode import unidecode
 
 
 @callback(
@@ -24,33 +26,7 @@ from unidecode import unidecode
     prevent_initial_call=True,
 )
 def suggest_locs(value, options):
-    # Check if the value is already present in the options
-    if any(item["props"]["value"] == value for item in options):
-        raise PreventUpdate
-    if value is None or len(value) < AUTOCOMPLETE_MIN_LENGTH:
-        raise PreventUpdate
-    locations_names, _ = get_place_address(
-        value, limit=5
-    )  # Get up to a maximum of 5 options
-    if locations_names is None or len(locations_names) == 0:
-        raise PreventUpdate
-
-    # Create options with both native and accent-stripped names
-    # This allows "Munchen" to match "München" in the datalist
-    options = []
-    seen = set()
-    for name in locations_names:
-        # Add native name
-        if name not in seen:
-            options.append(html.Option(value=name))
-            seen.add(name)
-        # Add accent-stripped version if different
-        stripped = unidecode(name)
-        if stripped != name and stripped not in seen:
-            options.append(html.Option(value=stripped))
-            seen.add(stripped)
-
-    return options
+    return create_location_suggestions(value, options)
 
 
 @callback(
@@ -265,29 +241,7 @@ def update_location(_, pos, n_clicks):
     prevent_initial_call=True,
 )
 def map_click(clickData):
-    if clickData is not None:
-        try:
-            lat = clickData["latlng"]["lat"]
-            lon = clickData["latlng"]["lng"]
-            address = get_place_address_reverse(lon, lat)
-            return (
-                [dl.Marker(position=[lat, lon], children=dl.Tooltip(address))],
-                address,
-                None,
-                False,
-            )
-        except Exception as e:
-            logging.error(
-                f"{type(e).__name__} at line {e.__traceback__.tb_lineno} of {__file__}: {e}"
-            )
-            return (
-                no_update,
-                no_update,
-                "You cannot select this location, try again",
-                True,
-            )
-
-    raise PreventUpdate
+    return handle_map_click(clickData)
 
 
 # Note: clear_input callback moved to main.py as pattern-matching callback
