@@ -560,26 +560,7 @@ def make_fig_bars(df):
             ]
         )
 
-        # Add precipitation intensity bands in the background
-        shapes = []
-        for band in PRECIPITATION_INTENSITY_BANDS_BARS:
-            shapes.append(
-                dict(
-                    type="rect",
-                    xref="paper",
-                    yref="y",
-                    x0=0,
-                    x1=1,
-                    y0=band["y0"],
-                    y1=band["y1"],
-                    fillcolor=band["color"],
-                    line=dict(width=0),
-                    layer="below",
-                )
-            )
-
         fig.update_layout(
-            shapes=shapes,
             legend_orientation="h",
             xaxis=dict(title="Leave at..", fixedrange=True),
             yaxis=dict(visible=False, fixedrange=True),
