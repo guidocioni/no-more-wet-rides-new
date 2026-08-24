@@ -4,6 +4,12 @@ from dash_iconify import DashIconify
 from dash import dcc, html, register_page
 from utils.settings import mapURL, attribution
 from utils.constants import GRAPH_CONFIG, DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM
+from components.shared_components import (
+    create_geolocate_button,
+    create_generate_button,
+    create_radar_legend,
+    create_clear_button,
+)
 from .callbacks import *
 import dash_leaflet as dl
 
@@ -17,15 +23,7 @@ controls = dmc.Paper(
     className="mb-2",
     children=[
         html.Div(id="geo"),
-        dmc.Button(
-            "Geolocate",
-            id={"type": "geolocate", "index": "ride"},
-            leftSection=DashIconify(icon="ion:location-outline", width=20),
-            className="col-12 mb-2",
-            size='sm',
-            variant='light',
-            color='gray',
-        ),
+        create_geolocate_button("ride"),
         dbc.InputGroup(
             [
                 DashIconify(icon="gis:route-start", width=30, color="#40c057"),
@@ -42,13 +40,7 @@ controls = dmc.Paper(
                     id="list-suggested-departures",
                     children=[html.Option(value="Nothing (yet)")],
                 ),
-                dbc.Button(
-                    DashIconify(icon="fluent-mdl2:clear", width=10),
-                    n_clicks=0,
-                    id=dict(type="clearButton", id="departure"),
-                    color="light",
-                    size="sm",
-                ),
+                create_clear_button(dict(type="clearButton", id="departure")),
             ],
         ),
         dmc.Button(
@@ -72,13 +64,7 @@ controls = dmc.Paper(
                     persistence=True,
                     list="list-suggested-destinations",
                 ),
-                dbc.Button(
-                    DashIconify(icon="fluent-mdl2:clear", width=10),
-                    n_clicks=0,
-                    id=dict(type="clearButton", id="destination"),
-                    color="light",
-                    size="sm",
-                ),
+                create_clear_button(dict(type="clearButton", id="destination")),
                 html.Datalist(
                     id="list-suggested-destinations",
                     children=[html.Option(value="Nothing (yet)")],
@@ -101,13 +87,7 @@ controls = dmc.Paper(
             ],
             className="mb-3 col-12",
         ),
-        dmc.Button(
-            "Generate",
-            id={"type": "generate-button", "index": "ride"},
-            className="col-12",
-            size="md",
-            leftSection=DashIconify(icon="mdi:lightning-bolt", width=20),
-        ),
+        create_generate_button("ride"),
     ],
 )
 
@@ -189,25 +169,7 @@ map_card = dmc.Paper(
             id="map-div",
             style={"position": "relative"},
         ),
-        html.Img(
-            id="radar-legend",
-            src="https://maps.dwd.de/geoserver/ows?service=WMS&version=1.3.0&request=GetLegendGraphic&format=image/png&layer=dwd:Niederschlagsradar",
-            style={
-                "position": "absolute",
-                "bottom": "30px",
-                "right": "10px",
-                "background": "rgba(255, 255, 255, 0.9)",
-                "padding": "3px 2px 3px 3px",
-                "border-radius": "3px",
-                "box-shadow": "0 1px 3px rgba(0,0,0,0.4)",
-                "z-index": "1000",
-                "height": "120px",
-                "width": "auto",
-                "pointer-events": "none",
-            },
-            className="leaflet-control",
-            title="Precipitation intensity (mm/h)",
-        ),
+        create_radar_legend("radar-legend"),
     ]
 )
 
