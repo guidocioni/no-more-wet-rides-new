@@ -16,6 +16,7 @@ from utils.utils import (
     get_data,
     get_radar_data,
     get_directions,
+    get_place_address_reverse,
 )
 from utils.callback_helpers import (
     create_location_suggestions,
